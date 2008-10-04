@@ -1,5 +1,0 @@
-CHANGELOG for Views for Drupal 6
-
-Views 2.0-dev
- o Complete rewrite begun
-
