@@ -1,0 +1,13 @@
+; $Id: og_actions.info,v 1.1 2008/08/01 03:45:44 weitzman Exp $
+name = Organic groups actions
+description = Provides actions for use with Organic Groups and Trigger.
+package = "Organic groups"
+dependencies[] = og
+dependencies[] = trigger
+core = 6.x
+; Information added by drupal.org packaging script on 2008-09-15
+version = "6.x-1.0-rc6"
+core = "6.x"
+project = "og"
+datestamp = "1221506435"
+
