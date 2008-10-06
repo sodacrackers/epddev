@@ -15,11 +15,11 @@
 
 
 --
--- Create schema drupal64
+-- Create schema elephantparents
 --
 
-CREATE DATABASE IF NOT EXISTS drupal64;
-USE drupal64;
+CREATE DATABASE IF NOT EXISTS elephantparents;
+USE elephantparents;
 
 --
 -- Definition of table `d_access`
