@@ -1,5 +1,5 @@
 <?php
-// $Id: common-context.inc,v 1.6 2008/08/22 22:37:18 merlinofchaos Exp $
+// $Id: common-context.inc,v 1.6.2.3 2008/10/11 21:10:35 sdboyer Exp $
 
 /**
  * @file includes/common-context.inc
@@ -323,6 +323,7 @@ function theme_panels_common_context_item_form($form) {
       $output .= '<th class="position">' . t('Weight') . '</th>';
     }
     $output .= '<th class="operation">' . t('Operation') . '</th>';
+    $output .= '</tr>';
     $output .= '</thead>';
     $output .= '<tbody>';
 
@@ -512,7 +513,7 @@ function panels_ajax_context_item_edit($module = NULL, $type = NULL, $panel_name
   $contexts = panels_context_load_contexts($object);
 
   // Remove this context, because we can't really allow circular contexts.
-  unset($contexts[panels_context_context_id($ref[$position])]);
+  unset($contexts[panels_context_id($ref[$position])]);
 
   $form_state = array(
     'object' => &$object,

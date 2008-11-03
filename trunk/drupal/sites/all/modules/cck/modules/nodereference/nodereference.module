@@ -1,5 +1,5 @@
 <?php
-// $Id: nodereference.module,v 1.138.2.29 2008/08/30 03:08:45 yched Exp $
+// $Id: nodereference.module,v 1.138.2.38 2008/10/06 15:11:39 karens Exp $
 
 /**
  * @file
@@ -155,7 +155,9 @@ function nodereference_field_settings($op, $field) {
       $data[$table_alias][$field['field_name'] .'_nid']['relationship'] = array(
         'base' => 'node',
         'field' => $db_info['columns']['nid']['column'],
-        'handler' => 'views_handler_relationship',
+        'handler' => 'content_handler_relationship',
+        'label' => t($field['widget']['label']),
+        'multiple' => $field['multiple'],
       );
       return $data;
   }
@@ -191,7 +193,7 @@ function nodereference_field($op, &$node, $field, &$items, $teaser, $page) {
       foreach ($items as $delta => $item) {
         if (is_array($item)) {
           $error_element = isset($item['_error_element']) ? $item['_error_element'] : '';
-          unset($item['_error_element']);
+          if (is_array($item) && isset($item['_error_element'])) unset($item['_error_element']);
           if (!empty($item['nid'])) {
             if (!isset($refs[$item['nid']])) {
               form_set_error($error_element, t("%name: this post can't be referenced.", array('%name' => t($field['widget']['label']))));
@@ -468,12 +470,12 @@ function nodereference_autocomplete_value($element, $edit = FALSE) {
 function nodereference_select_process($element, $edit, $form_state, $form) {
   // The nodereference_select widget doesn't need to create its own
   // element, it can wrap around the optionwidgets_select element.
+  // This will create a new, nested instance of the field.
   // Add a validation step where the value can be unwrapped.
   $field_key  = $element['#columns'][0];
   $element[$field_key] = array(
     '#type' => 'optionwidgets_select',
     '#default_value' => isset($element['#value']) ? $element['#value'] : '',
-    '#element_validate' => array('optionwidgets_validate', 'nodereference_optionwidgets_validate'),
     // The following values were set by the content module and need
     // to be passed down to the nested element.
     '#title' => $element['#title'],
@@ -484,6 +486,10 @@ function nodereference_select_process($element, $edit, $form_state, $form) {
     '#delta' => $element['#delta'],
     '#columns' => $element['#columns'],
   );
+  if (empty($element[$field_key]['#element_validate'])) {
+    $element[$field_key]['#element_validate'] = array();
+  }
+  array_unshift($element[$field_key]['#element_validate'], 'nodereference_optionwidgets_validate');
   return $element;
 }
 
@@ -498,12 +504,12 @@ function nodereference_select_process($element, $edit, $form_state, $form) {
 function nodereference_buttons_process($element, $edit, $form_state, $form) {
   // The nodereference_select widget doesn't need to create its own
   // element, it can wrap around the optionwidgets_select element.
+  // This will create a new, nested instance of the field.
   // Add a validation step where the value can be unwrapped.
   $field_key  = $element['#columns'][0];
   $element[$field_key] = array(
     '#type' => 'optionwidgets_buttons',
     '#default_value' => isset($element['#value']) ? $element['#value'] : '',
-    '#element_validate' => array('optionwidgets_validate', 'nodereference_optionwidgets_validate'),
     // The following values were set by the content module and need
     // to be passed down to the nested element.
     '#title' => $element['#title'],
@@ -514,6 +520,10 @@ function nodereference_buttons_process($element, $edit, $form_state, $form) {
     '#delta' => $element['#delta'],
     '#columns' => $element['#columns'],
   );
+  if (empty($element[$field_key]['#element_validate'])) {
+    $element[$field_key]['#element_validate'] = array();
+  }
+  array_unshift($element[$field_key]['#element_validate'], 'nodereference_optionwidgets_validate');
   return $element;
 }
 
@@ -536,7 +546,6 @@ function nodereference_autocomplete_process($element, $edit, $form_state, $form)
     '#type' => 'text_textfield',
     '#default_value' => isset($element['#value']) ? $element['#value'] : '',
     '#autocomplete_path' => 'nodereference/autocomplete/'. $element['#field_name'],
-    '#element_validate' => array('nodereference_autocomplete_validate'),
     // The following values were set by the content module and need
     // to be passed down to the nested element.
     '#title' => $element['#title'],
@@ -547,11 +556,16 @@ function nodereference_autocomplete_process($element, $edit, $form_state, $form)
     '#delta' => $element['#delta'],
     '#columns' => $element['#columns'],
   );
+  if (empty($element[$field_key]['#element_validate'])) {
+    $element[$field_key]['#element_validate'] = array();
+  }
+  array_unshift($element[$field_key]['#element_validate'], 'nodereference_autocomplete_validate');
 
   // Used so that hook_field('validate') knows where to flag an error.
   $element['_error_element'] = array(
     '#type' => 'value',
-    // TODO: why do we need to repeat $field_key twice ?
+    // Wrapping the element around a text_textfield element creates a
+    // nested element, so the final id will look like 'field-name-0-nid-nid'.
     '#value' => implode('][', array_merge($element['#parents'], array($field_key, $field_key))),
   );
   return $element;
@@ -563,14 +577,21 @@ function nodereference_autocomplete_process($element, $edit, $form_state, $form)
  * Remove the wrapper layer and set the right element's value.
  * We don't know exactly where this element is, so we drill down
  * through the element until we get to our key.
+ *
+ * We use $form_state['values'] instead of $element['#value']
+ * to be sure we have the most accurate value when other modules
+ * like optionwidgets are using #element_validate to alter the value.
+ *
  */
 function nodereference_optionwidgets_validate($element, &$form_state) {
   $field_key  = $element['#columns'][0];
-  $new_parents = array();
+
   $value = $form_state['values'];
+  $new_parents = array();
   foreach ($element['#parents'] as $parent) {
     $value = $value[$parent];
-    if ($parent == $field_key) {
+    // Use === to be sure we get right results if parent is a zero (delta) value.
+    if ($parent === $field_key) {
       $element['#parents'] = $new_parents;
       form_set_value($element, $value, $form_state);
       break;
@@ -583,6 +604,8 @@ function nodereference_optionwidgets_validate($element, &$form_state) {
  * Validate an autocomplete element.
  *
  * Remove the wrapper layer and set the right element's value.
+ * This will move the nested value at 'field-name-0-nid-nid'
+ * back to its original location, 'field-name-0-nid'.
  */
 function nodereference_autocomplete_validate($element, &$form_state) {
   $field_name = $element['#field_name'];
@@ -767,7 +790,7 @@ function _nodereference_potential_references_standard($field, $string = '', $exa
     return array();
   }
 
-  if (isset($string)) {
+  if ($string !== '') {
     $string_clause = $exact_string ? " AND n.title = '%s'" : " AND n.title LIKE '%%%s%'";
     $related_clause = "(". $related_clause .")". $string_clause;
     $args[] = $string;

@@ -1,5 +1,5 @@
 <?php
-// $Id: theme.inc,v 1.60 2008/09/30 20:57:38 merlinofchaos Exp $
+// $Id: theme.inc,v 1.62 2008/10/16 17:06:25 merlinofchaos Exp $
 
 /**
  * @file theme.inc
@@ -31,7 +31,6 @@ function _views_theme_functions($hook, $view, $display = NULL) {
   }
   $themes[] = $hook . '__' . $view->name;
   $themes[] = $hook;
-
   return $themes;
 }
 
@@ -305,14 +304,16 @@ function template_preprocess_views_view_table(&$vars) {
           $initial = 'desc';
         }
 
-        $image = theme('tablesort_indicator', $initial);
         $title = t('sort by @s', array('@s' => $label));
+        if ($active == $field) {
+          $label .= theme('tablesort_indicator', $initial);
+        }
         $link_options = array(
           'html' => true,
           'attributes' => array('title' => $title),
           'query' => 'order=' . urlencode($field) . '&sort=' . $initial . $query,
         );
-        $vars['header'][$field] = l($label . $image, $_GET['q'], $link_options);
+        $vars['header'][$field] = l($label, $_GET['q'], $link_options);
       }
     }
 

@@ -1,12 +1,31 @@
 <?php
-// $Id: content.token.inc,v 1.5.2.1 2008/08/05 18:10:27 yched Exp $
+// $Id: content.token.inc,v 1.5.2.4 2008/10/04 13:14:21 karens Exp $
+
+/**
+ * @file
+ * Implementation of hook_content_build_modes
+ * (on behalf of token.module)
+ */
+function token_content_build_modes() {
+  return array(
+    'token' => array(
+      'title' => t('Token'),
+      'build modes' => array(
+        'token' => array(
+          'title' => t('Token'),
+          'views style' => FALSE,
+        ),
+      ),
+    ),
+  );
+}
 
 // Two helper functions that generate appropriate tokens for CCK-added fields.
 function content_token_values($type, $object = NULL) {
   $tokens = array();
   if ($type == 'node') {
     $node = $object;
-    $node->build_mode = 'token_values';
+    $node->build_mode = 'token';
     $node->content = array();
     content_view($node);
     // The formatted values will only be known after the content has been rendered.
@@ -20,10 +39,9 @@ function content_token_values($type, $object = NULL) {
       $function = $field_types[$field['type']]['module'] . '_token_values';
       if (!empty($items) && function_exists($function)) {
         $token_values = $function('field', $items);
-        foreach($token_values as $token => $value) {
+        foreach ($token_values as $token => $value) {
           $tokens[$field['field_name'] .'-'. $token] = $value;
         }
-
       }
     }
   }
@@ -72,8 +90,8 @@ if (module_exists('nodereference')) {
       $item = $object[0];
 
       $tokens['nid']   = $item['nid'];
-      $tokens['title'] = strip_tags($item['view']);
-      $tokens['link']  = $item['view'];
+      $tokens['title'] = isset($item['view']) ? strip_tags($item['view']) : '';
+      $tokens['link']  = isset($item['view']) ? $item['view'] : '';
       $tokens['path'] = url('node/' . $item['nid']);
       $tokens['url'] = url('node/' . $item['nid'], array('absolute' => TRUE));
 
@@ -99,7 +117,7 @@ if (module_exists('number')) {
       $item = $object[0];
 
       $tokens['raw']       = $item['value'];
-      $tokens['formatted'] = $item['view'];
+      $tokens['formatted'] = isset($item['view']) ? $item['view'] : '';
 
       return $tokens;
     }
@@ -123,7 +141,7 @@ if (module_exists('text')) {
       $item = $object[0];
 
       $tokens['raw']  = $item['value'];
-      $tokens['formatted'] = $item['view'];
+      $tokens['formatted'] = isset($item['view']) ? $item['view'] : '';
       return $tokens;
     }
   }
@@ -149,8 +167,8 @@ if (module_exists('userreference')) {
       $item = $object[0];
 
       $tokens['uid']   = $item['uid'];
-      $tokens['name']  = strip_tags($item['view']);
-      $tokens['link']  = $item['view'];
+      $tokens['name']  = isset($item['view']) ? strip_tags($item['view']) : '';
+      $tokens['link']  = isset($item['view']) ? $item['view'] : '';
       $tokens['path'] = url('user/' . $item['uid']);
       $tokens['url'] = url('user/' . $item['uid'], array('absolute' => TRUE));
 

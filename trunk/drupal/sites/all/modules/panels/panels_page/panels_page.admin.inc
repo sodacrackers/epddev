@@ -1,5 +1,5 @@
 <?php
-// $Id: panels_page.admin.inc,v 1.20.2.2 2008/09/04 02:45:24 sdboyer Exp $
+// $Id: panels_page.admin.inc,v 1.20.2.6 2008/10/11 01:33:48 sdboyer Exp $
 
 
 /**
@@ -66,7 +66,10 @@ function panels_page_list_page() {
     // this is safe as it's always programmatic
     $item[] = $panel_page->type;
 
-    if (empty($panel_page->display)) {
+    if ($panel_page->type == t('Default')) {
+      $panel_page->display = &$panel_page->primary;
+    }
+    else {
       $panel_page->display = $displays[$panel_page->did];
     }
     $item[] = check_plain($layouts[$panel_page->display->layout]['title']);
@@ -153,10 +156,11 @@ function panels_page_disable_page($name = NULL) {
  */
 function panels_page_delete_confirm(&$form_state, $panel_page) {
   $form_state['panel_page'] = $panel_page;
+  $form = array();
   if ($panel_page->type != t('Overridden')) {
     return confirm_form($form,
       t('Are you sure you want to delete "@title"?', array('@title' => panels_page_get_title($panel_page))),
-      $_GET['destination'] ? $_GET['destination'] : 'admin/panels/panel-page',
+      isset($_GET['destination']) ? $_GET['destination'] : 'admin/panels/panel-page',
       t('This action cannot be undone.'),
       t('Delete'), t('Cancel')
     );
@@ -164,7 +168,7 @@ function panels_page_delete_confirm(&$form_state, $panel_page) {
   else {
     return confirm_form($form,
       t('Are you sure you want to revert "@title" to its default configuration?', array('@title' => panels_page_get_title($panel_page))),
-      $_GET['destination'] ? $_GET['destination'] : 'admin/panels/panel-page',
+      isset($_GET['destination']) ? $_GET['destination'] : 'admin/panels/panel-page',
       t('This action cannot be undone.'),
       t('Revert'), t('Cancel')
     );
@@ -254,6 +258,7 @@ function panels_page_edit($panel_page, $next = NULL) {
  */
 function panels_page_edit_form(&$form_state, &$panel_page, $next = NULL) {
   panels_load_include('common');
+  panels_load_include('plugins');
   drupal_add_css(panels_get_path('css/panels_admin.css'));
   $layout = panels_get_layout($panel_page->display->layout);
 
@@ -607,7 +612,7 @@ function panels_page_export_page(&$form_state, $panel_page) {
   $code = panels_page_export($panel_page);
   $lines = substr_count($code, "\n");
   $form = array('output' => array(
-    '#title' => t("Export of '@title' ", array('@title' => $panel_page->title)),
+    '#title' => t("Export of '@title'", array('@title' => $panel_page->title)),
     '#type' => 'textarea',
     '#default_value' => $code,
     '#rows' => $lines,
@@ -640,7 +645,6 @@ function panels_page_context_form(&$form_state, $panel_page, $next) {
   $form_state['next'] = $next;
 
   drupal_add_css(panels_get_path('css/panels_admin.css'));
-  $layout = panels_get_layout($panel_page->display->layout);
 
   $form['right'] = array(
     '#prefix' => '<div class="right-container">',
@@ -864,7 +868,7 @@ function panels_page_preview_page($panel_page) {
       // TODO should this 'business logic' be separated out?
       drupal_not_found();
     }
-    $panel_page->context[panels_argument_context_id($argument)] = $context;
+    $panel_page->context[panels_context_id($argument, 'argument')] = $context;
   }
   _panels_page_prepare_render($panel_page);
   */
@@ -888,8 +892,8 @@ function panels_page_admin_view(&$form_state) {
   if ($args_missing = max($required_args - count($args), 0)) {
     $value = $url;
     $description = format_plural($args_missing,
-      t('1 argument is missing to generate a valid URL.'),
-      t('%count arguments are missing to generate a valid URL.', array('%count' => $args_missing))
+      '1 argument is missing to generate a valid URL.',
+      '@count arguments are missing to generate a valid URL.'
     );
   }
   else {

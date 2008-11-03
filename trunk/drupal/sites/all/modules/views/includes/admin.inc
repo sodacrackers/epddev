@@ -1,5 +1,5 @@
 <?php
-// $Id: admin.inc,v 1.136 2008/09/29 19:53:13 merlinofchaos Exp $
+// $Id: admin.inc,v 1.142 2008/10/14 17:48:14 merlinofchaos Exp $
 /**
  * @file admin.inc
  * Provides the Views' administrative interface.
@@ -31,7 +31,13 @@ function views_ui_check_advanced_help() {
   }
 
   if (!module_exists('advanced_help')) {
-    drupal_set_message(t('If you install the advanced help module from !href, Views will provide more and better help. <a href="@hide">Hide this message.</a>', array('!href' => l('http://drupal.org/project/advanced_help', 'http://drupal.org/project/advanced_help'), '@hide' => url('admin/build/views/tools'))));
+    $filename = db_result(db_query("SELECT filename FROM {system} WHERE type = 'module' AND name = 'advanced_help'"));
+    if ($filename && file_exists($filename)) {
+      drupal_set_message(t('If you <a href="@modules">enable the advanced help module</a>, Views will provide more and better help. <a href="@hide">Hide this message.</a>', array('@modules' => url('admin/build/modules'),'@hide' => url('admin/build/views/tools'))));
+    }
+    else {
+      drupal_set_message(t('If you install the advanced help module from !href, Views will provide more and better help. <a href="@hide">Hide this message.</a>', array('!href' => l('http://drupal.org/project/advanced_help', 'http://drupal.org/project/advanced_help'), '@hide' => url('admin/build/views/tools'))));
+    }
   }
 }
 
@@ -365,7 +371,7 @@ function views_ui_preview($js, $view) {
           if ($queries) {
             $queries .= "\n";
           }
-          $queries .= t('[@time ms] ', array('@time' => intval($query[1] * 100000) / 100)) . $query[0];
+          $queries .= t('[@time ms]', array('@time' => intval($query[1] * 100000) / 100)) . ' ' . $query[0];
         }
 
         $rows[] = array('<strong>' . t('Other queries') . '</strong>', '<pre>' . $queries . '</pre>');
@@ -501,7 +507,7 @@ function views_ui_clone_page($view) {
     'view' => $view->copy(),
   );
 
-  drupal_set_title(t('Clone view @view', array('@view' => $view->name)));
+  drupal_set_title(t('Clone view %view', array('%view' => $view->name)));
   return drupal_build_form('views_ui_add_form', $form_state);
 }
 
@@ -668,14 +674,14 @@ function views_ui_break_lock_confirm(&$form_state, $view) {
 function views_ui_break_lock_confirm_submit(&$form, &$form_state) {
   db_query("DELETE FROM {views_object_cache} WHERE obj = 'view' AND name = '%s'", $form_state['view']->name);
   $form_state['redirect'] = 'admin/build/views/edit/' . $form_state['view']->name;
-  drupal_set_message('The lock has been broken and you may now edit this view.');
+  drupal_set_message(t('The lock has been broken and you may now edit this view.'));
 }
 
 /**
  * The main view edit page
  */
 function views_ui_edit_page($view) {
-  drupal_set_title(t('Edit view "%view"', array('%view' => $view->name)));
+  drupal_set_title(t('Edit view %view', array('%view' => $view->name)));
   $output = theme('views_ui_edit_view', $view);
   views_ui_check_advanced_help();
   return $output;
@@ -847,7 +853,7 @@ function views_ui_edit_view_form(&$form_state, $view) {
 /**
  * Validate that a view is complete and whole.
  */
-function views_ui_edit_view_form_validate($form, $form_state) {
+function views_ui_edit_view_form_validate($form, &$form_state) {
   // Do not validate cancel or delete.
   if (empty($form_state['clicked_button']['#value']) || $form_state['clicked_button']['#value'] != t('Save')) {
     return;
@@ -961,7 +967,7 @@ function template_preprocess_views_ui_edit_view(&$vars) {
     $account = user_load($view->locked->uid);
     $vars['locked'] = theme('username', $account);
     $vars['lock_age'] = format_interval(time() - $view->locked->updated);
-    $vars['break'] = l(t('break this lock'), 'admin/build/views/break-lock/' . $view->name);
+    $vars['break'] = url('admin/build/views/break-lock/' . $view->name);
   }
 
   $vars['quick_links_raw'] = array(
@@ -1235,7 +1241,7 @@ function template_preprocess_views_ui_edit_item(&$vars) {
         $fields[$pid]['links'] = l('<span>' . t('Change settings for this style') . '</span>', "admin/build/views/nojs/config-style/$view->name/$display->id/$type/$id", array('attributes' => array('class' => 'views-button-configure views-ajax-link', 'title' => t('Settings')), 'html' => true));
       }
 
-      $fields[$pid]['title'] = t(' &nbsp; Style: !style', array('!style' => l($style_title, "admin/build/views/nojs/change-style/$view->name/$display->id/$type/$id", array('attributes' => array('class' => 'views-ajax-link')))));
+      $fields[$pid]['title'] = ' ' . t('&nbsp; Style: !style', array('!style' => l($style_title, "admin/build/views/nojs/change-style/$view->name/$display->id/$type/$id", array('attributes' => array('class' => 'views-ajax-link')))));
       $fields[$pid]['class'] = views_ui_item_css($display->id . '-' . $type . '-' . $pid);
       if (!empty($view->changed_sections[$display->id . '-' . $type . '-' . $pid])) {
         $fields[$pid]['changed'] = TRUE;
@@ -1266,7 +1272,7 @@ function views_ui_regenerate_tabs(&$view, $display_id = NULL, $object = NULL) {
   }
 
   if (!$view->set_display('default')) {
-    views_ajax_render(t('Invalid display id while regenerating tabs'));
+    views_ajax_render(t('Invalid display id found while regenerating tabs'));
   }
 
   if (!is_object($object)) {
@@ -1365,7 +1371,9 @@ function views_ui_standard_form_buttons(&$form, &$form_state, $form_id, $name = 
   $form['#no_cache'] = TRUE;
 
   // If this isn't an ajaxy form, then we want to set the title.
-  drupal_set_title($form['#title']);
+  if (!empty($form['#title'])) {
+    drupal_set_title($form['#title']);
+  }
   views_add_css('views-admin');
 }
 
@@ -2283,7 +2291,7 @@ function views_ui_config_item_form(&$form_state) {
         $data = views_fetch_data($relationship['table']);
         $base = $data[$relationship['field']]['relationship']['base'];
         $base_fields = views_fetch_fields($base, $form_state['type']);
-        if (isset($base_fields[$handler->table . '.' . $handler->field])) {
+        if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
           $relationship_handler->init($view, $relationship);
           $relationship_options[$relationship['id']] = $relationship_handler->label();
         }
@@ -2293,7 +2301,7 @@ function views_ui_config_item_form(&$form_state) {
         // Make sure the existing relationship is even valid. If not, force
         // it to none.
         $base_fields = views_fetch_fields($view->base_table, $form_state['type']);
-        if (isset($base_fields[$handler->table . '.' . $handler->field])) {
+        if (isset($base_fields[$item['table'] . '.' . $item['field']])) {
           $relationship_options = array_merge(array('none' => t('Do not use a relationship')), $relationship_options);
         }
         $rel = empty($item['relationship']) ? 'none' : $item['relationship'];
@@ -2321,7 +2329,7 @@ function views_ui_config_item_form(&$form_state) {
       }
 
       $form['#title'] = check_plain($view->display[$display_id]->display_title) . ': ';
-      $form['#title'] .= t('Configure @type "@item"', array('@type' => $types[$type]['lstitle'], '@item' => $handler->ui_name()));
+      $form['#title'] .= t('Configure @type %item', array('@type' => $types[$type]['lstitle'], '%item' => $handler->ui_name()));
 
       $form['#section'] = $display_id . '-' . $type . '-' . $id;
 
@@ -2434,7 +2442,7 @@ function views_ui_config_item_extra_form(&$form_state) {
       $types = views_object_types();
 
       $form['#title'] = check_plain($view->display[$display_id]->display_title) . ': ';
-      $form['#title'] .= t('Configure extra settings for @type "@item"', array('@type' => $types[$type]['lstitle'], '@item' => $handler->ui_name()));
+      $form['#title'] .= t('Configure extra settings for @type %item', array('@type' => $types[$type]['lstitle'], '%item' => $handler->ui_name()));
 
       $form['#section'] = $display_id . '-' . $type . '-' . $id;
 
@@ -2499,7 +2507,7 @@ function views_ui_change_style_form(&$form_state) {
     }
     $handler->init($view, $item);
     $types = views_object_types();
-    $form['#title'] = t('Change summary style for @type "@item"', array('@type' => $types[$type]['lstitle'], '@item' => $handler->ui_name()));
+    $form['#title'] = t('Change summary style for @type %item', array('@type' => $types[$type]['lstitle'], '%item' => $handler->ui_name()));
 
     $form['#section'] = $display_id . '-' . $type . '-' . $id . '-style-plugin';
 
@@ -2586,7 +2594,7 @@ function views_ui_config_style_form(&$form_state) {
     $types = views_object_types();
 
     $form['#title'] = check_plain($view->display[$display_id]->display_title) . ': ';
-    $form['#title'] .= t('Configure summary style for @type "@item"', array('@type' => $types[$type]['lstitle'], '@item' => $handler->ui_name()));
+    $form['#title'] .= t('Configure summary style for @type %item', array('@type' => $types[$type]['lstitle'], '%item' => $handler->ui_name()));
 
     $form['#section'] = $display_id . '-' . $type . '-style-options';
 

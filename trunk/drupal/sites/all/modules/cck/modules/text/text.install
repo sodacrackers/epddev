@@ -1,7 +1,8 @@
 <?php
-// $Id: text.install,v 1.37.2.5 2008/09/07 14:52:32 yched Exp $
+// $Id: text.install,v 1.37.2.8 2008/10/04 13:14:23 karens Exp $
 
 /**
+ * @file
  * Implementation of hook_install().
  */
 function text_install() {
@@ -49,13 +50,11 @@ function text_update_last_removed() {
  *
  */
 function text_update_6000() {
-  $ret = array();
-
-  if (drupal_get_installed_schema_version('content') < 6000) {
-    drupal_set_message(t('Some updates are still pending. Please return to <a href="@update-php">update.php</a> and run the remaining updates.', array('@update-php' => base_path() .'update.php?op=selection')), 'warning');
-    $ret['#abort'] = array('success' => FALSE, 'query' => t('Updates for content.module need to be run first.<br/>Please re-run the update script.'));
-    return $ret;
+  if ($abort = content_check_update('text')) {
+    return $abort;
   }
+
+  $ret = array();
 
   drupal_load('module', 'content');
   $result = db_query("SELECT * FROM {". content_instance_tablename() ."} WHERE widget_type = 'text'");
@@ -78,6 +77,10 @@ function text_update_6000() {
  *
  */
 function text_update_6001() {
+  if ($abort = content_check_update('text')) {
+    return $abort;
+  }
+
   $ret = array();
 
   drupal_load('module', 'content');
@@ -111,4 +114,17 @@ function text_update_6001() {
     }
   }
   return $ret;
+}
+
+/**
+ * Update 6000 and 6001 were possibly broken if they were executed while
+ * the modules were still disabled, so we re-run them.
+ * Having them run a second time on sites that got updated correctly has no
+ * side-effect (see http://drupal.org/node/310873).
+ */
+function text_update_6002() {
+  return text_update_6000();
+}
+function text_update_6003() {
+  return text_update_6001();
 }

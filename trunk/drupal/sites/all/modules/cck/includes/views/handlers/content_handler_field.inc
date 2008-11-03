@@ -1,7 +1,8 @@
 <?php
-// $Id: content_handler_field.inc,v 1.1.2.1 2008/09/04 18:12:27 yched Exp $
+// $Id: content_handler_field.inc,v 1.1.2.7 2008/10/04 13:14:21 karens Exp $
 
 /**
+ * @file
  * The subclass adds basic field and formatter info,
  * for field-specific subclasses to use if they need to.
  *
@@ -38,6 +39,26 @@ class content_handler_field extends views_handler_field_node {
     $field = $this->content_field;
     $options = $this->options;
 
+    $form['label_type'] = array(
+      '#title' => t('Label'),
+      '#type' => 'radios',
+      '#options' => array(
+        'none' => t('None'),
+        'widget' => t('Widget label (@label)', array('@label' => $field['widget']['label'])),
+        'custom' => t('Custom'),
+      ),
+      '#default_value' => $options['label_type'],
+      '#weight' => 2,
+    );
+    $form['label'] = array(
+      '#title' => t('Custom label'),
+      '#type' => 'textfield',
+      '#default_value' => $options['label'],
+      '#process' => array('views_process_dependency'),
+      '#dependency' => array('radio:options[label_type]' => array('custom')),
+      '#weight' => 3,
+     );
+
     $field_types = _content_field_types();
     $formatters = array();
     if (is_array($field_types[$field['type']]['formatters'])) {
@@ -51,28 +72,8 @@ class content_handler_field extends views_handler_field_node {
       '#options' => $formatters,
       '#required' => TRUE,
       '#default_value' => $options['format'],
-      '#weight' => 0,
+      '#weight' => 4,
     );
-
-    $form['label_type'] = array(
-      '#title' => t('Label'),
-      '#type' => 'radios',
-      '#options' => array(
-        'none' => t('None'),
-        'widget' => t('Widget label (@label)', array('@label' => $field['widget']['label'])),
-        'custom' => t('Custom'),
-      ),
-      '#default_value' => $options['label_type'],
-      '#weight' => 1,
-    );
-    $form['label'] = array(
-      '#title' => t('Custom label'),
-      '#type' => 'textfield',
-      '#default_value' => $options['label'],
-      '#process' => array('views_process_dependency'),
-      '#dependency' => array('radio:options[label_type]' => array('custom')),
-      '#weight' => 2,
-     );
   }
 
   function label() {
@@ -108,9 +109,7 @@ class content_handler_field extends views_handler_field_node {
 
     // $values will be used as a fake $node object;
     // we provide a build_mode for rendering.
-    // TODO: we can stick any value in there -
-    // what would make most sense ?  row_style ?
-    $values->build_mode = 'views';
+    $values->build_mode = NODE_BUILD_NORMAL;
 
     $item = array();
     foreach ($db_info['columns'] as $column => $attributes) {
@@ -120,10 +119,4 @@ class content_handler_field extends views_handler_field_node {
     return $this->render_link(content_format($field, $item, $options['format'], $values), $values);
   }
 
-  function query() {
-    // Many of our formatters need the node type name, so let's be
-    // sure it's in the query.
-    $this->view->query->add_field('node', 'type');
-    parent::query();
-  }
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: content.views.inc,v 1.1.2.2 2008/09/05 00:25:32 yched Exp $
+// $Id: content.views.inc,v 1.1.2.9 2008/10/04 13:14:21 karens Exp $
 
 /**
  * @file
@@ -58,7 +58,10 @@ function content_views_handlers() {
         'parent' => 'views_handler_filter_many_to_one',
       ),
 
-      // relationship handlers (we don't have any specific to cck)
+      // relationship handlers
+      'content_handler_relationship' => array(
+        'parent' => 'views_handler_relationship',
+      ),
 
       // sort handlers
       'content_handler_sort' => array(
@@ -139,10 +142,17 @@ function content_views_field_views_data($field) {
   // TODO: is this really how we should do it ?
   if (isset($field_types[$field['type']])) {
     $db_info = content_database_info($field);
+
+    // Field modules that do not store data in the database
+    // should not create views data tables.
+    if (empty($db_info['columns'])) {
+      return;
+    }
+
     $table_alias = content_views_tablename($field);
 
     $types = array();
-    foreach(content_types() as $type) {
+    foreach (content_types() as $type) {
       if (isset($type['fields'][$field['field_name']])) {
         $types[] = $type['name'];
       }
@@ -189,10 +199,8 @@ function content_views_field_views_data($field) {
       }
     }
 
-    $additional_fields = $columns;
-    if ($field['multiple']) {
-      array_push($additional_fields, 'delta');
-    }
+    // Ensure all columns are retrieved,
+    $additional_fields = drupal_map_assoc($columns);
 
     $data[$columns[0]] = array(
       'group' => t('Content'),
@@ -243,7 +251,6 @@ function content_views_field_views_data($field) {
         'allow empty' => TRUE,
       );
     }
-
     // TODO: provide automatic filters, sorts, and arguments for each column, not just the first?
     return array($table_alias => $data);
   }

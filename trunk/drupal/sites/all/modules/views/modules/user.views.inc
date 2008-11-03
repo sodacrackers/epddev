@@ -1,5 +1,5 @@
 <?php
-//$Id: user.views.inc,v 1.50 2008/09/22 18:13:51 merlinofchaos Exp $
+//$Id: user.views.inc,v 1.52 2008/10/08 20:56:02 merlinofchaos Exp $
 /**
  * @file
  * Provide views data and handlers for user.module
@@ -94,12 +94,10 @@ function user_views_data() {
   // Note that this field implements field level access control.
   $data['users']['mail'] = array(
     'title' => t('E-mail'), // The item it appears as on the UI,
-    'help' => t('Email address for a given user. Only accessible to users with <em>administer users</em> permission'), // The help that appears on the UI,
+    'help' => t('Email address for a given user. This field is not normally shown to users, so be cautious when using it.'), // The help that appears on the UI,
     'field' => array(
       'handler' => 'views_handler_field_user_mail',
       'click sortable' => TRUE,
-      'access callback' => 'user_access',
-      'access arguments' => array('administer users'),
     ),
     'sort' => array(
       'handler' => 'views_handler_sort',
@@ -297,6 +295,12 @@ function user_views_plugins() {
       'user' => array(
         'title' => t('User ID from URL'),
         'handler' => 'views_plugin_argument_default_user',
+        'path' => drupal_get_path('module', 'views') . '/modules/user', // not necessary for most modules
+        'parent' => 'fixed', // so that the parent class is included
+      ),
+      'current_user' => array(
+        'title' => t('User ID from logged in user'),
+        'handler' => 'views_plugin_argument_default_current_user',
         'path' => drupal_get_path('module', 'views') . '/modules/user', // not necessary for most modules
         'parent' => 'fixed', // so that the parent class is included
       ),

@@ -1,7 +1,8 @@
 <?php
-// $Id: content_plugin_display_simple.inc,v 1.1.2.1 2008/09/04 18:12:27 yched Exp $
+// $Id: content_plugin_display_simple.inc,v 1.1.2.2 2008/10/04 13:14:21 karens Exp $
 
 /**
+ * @file
  * Handler for 'content_simple' display.
  */
 class content_plugin_display_simple extends views_plugin_display {
