@@ -1,5 +1,5 @@
 <?php
-// $Id: views_plugin_display.inc,v 1.11 2008/09/29 23:56:29 merlinofchaos Exp $
+// $Id: views_plugin_display.inc,v 1.14 2008/10/14 19:51:56 merlinofchaos Exp $
 /**
  * @file
  * Contains the base display plugin.
@@ -1105,7 +1105,7 @@ class views_plugin_display extends views_plugin {
         }
 
         if (!empty($this->definition['additional themes'])) {
-          foreach ($this->definition['additional themes'] as $theme) {
+          foreach ($this->definition['additional themes'] as $theme => $type) {
             $output .= '<p>' . t('This is an alternative template for this display.') . '</p>';
             $output .= '<pre>' . check_plain(file_get_contents('./' . $this->definition['theme path'] . '/' . strtr($theme, '_', '-') . '.tpl.php')) . '</pre>';
           }
@@ -1134,7 +1134,7 @@ class views_plugin_display extends views_plugin {
         }
 
         if (!empty($plugin->definition['additional themes'])) {
-          foreach ($plugin->definition['additional themes'] as $theme) {
+          foreach ($plugin->definition['additional themes'] as $theme => $type) {
             $output .= '<p>' . t('This is an alternative template for this style.') . '</p>';
             $output .= '<pre>' . check_plain(file_get_contents('./' . $plugin->definition['theme path'] . '/' . strtr($theme, '_', '-') . '.tpl.php')) . '</pre>';
           }
@@ -1163,7 +1163,7 @@ class views_plugin_display extends views_plugin {
         }
 
         if (!empty($plugin->definition['additional themes'])) {
-          foreach ($plugin->definition['additional themes'] as $theme) {
+          foreach ($plugin->definition['additional themes'] as $theme => $type) {
             $output .= '<p>' . t('This is an alternative template for this row style.') . '</p>';
             $output .= '<pre>' . check_plain(file_get_contents('./' . $plugin->definition['theme path'] . '/' . strtr($theme, '_', '-') . '.tpl.php')) . '</pre>';
           }
@@ -1499,12 +1499,18 @@ class views_plugin_display extends views_plugin {
    * Render a text area, using the proper format.
    */
   function render_textarea($area) {
+    static $formats = array();
+
     $value = $this->get_option($area);
     // Check to make sure the filter format exists; if not, we don't
     // display anything.
     $format = filter_resolve_format($this->get_option($area . '_format'));
 
-    if (!filter_list_format($format)) {
+    if (!array_key_exists($format, $formats)) {
+      $formats[$format] = db_result(db_query("SELECT name FROM {filter_formats} WHERE format = %d", $format));
+    }
+
+    if (!$formats[$format]) {
       return;
     }
 
@@ -1649,7 +1655,7 @@ class views_plugin_display extends views_plugin {
    * Provide the block system with any exposed widget blocks for this display.
    */
   function get_special_blocks() {
-    $delta = '$exp-' . $this->view->name . '-' . $this->display->id;
+    $delta = '-exp-' . $this->view->name . '-' . $this->display->id;
     $desc = t('Exposed form: @view-@display_id', array('@view' => $this->view->name, '@display_id' => $this->display->id));
 
     return array(
@@ -1663,7 +1669,7 @@ class views_plugin_display extends views_plugin {
    * Render any special blocks provided for this display.
    */
   function view_special_blocks($type) {
-    if ($type == '$exp') {
+    if ($type == '-exp') {
       // avoid interfering with the admin forms.
       if (arg(0) == 'admin' && arg(1) == 'build' && arg(2) == 'views') {
         return;

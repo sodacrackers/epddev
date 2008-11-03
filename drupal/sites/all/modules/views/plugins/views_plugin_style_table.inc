@@ -1,5 +1,5 @@
 <?php
-// $Id: views_plugin_style_table.inc,v 1.3 2008/09/15 20:32:21 merlinofchaos Exp $
+// $Id: views_plugin_style_table.inc,v 1.5 2008/10/15 22:25:36 merlinofchaos Exp $
 /**
  * @file
  * Contains the table style plugin.
@@ -64,7 +64,9 @@ class views_plugin_style_table extends views_plugin_style {
 
   /**
    * Normalize a list of columns based upon the fields that are
-   * available.
+   * available. This compares the fields stored in the style handler
+   * to the list of fields actually in the view, removing fields that
+   * have been removed and adding new fields in their own column.
    *
    * - Each field must be in a column.
    * - Each column must be based upon a field, and that field
@@ -167,7 +169,7 @@ class views_plugin_style_table extends views_plugin_style {
 
     if (isset($this->options['default'])) {
       $default = $this->options['default'];
-      if (!isset($fields[$default])) {
+      if (!isset($columns[$default])) {
         $default = -1;
       }
     }

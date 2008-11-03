@@ -1,5 +1,5 @@
 <?php
-// $Id: views.module,v 1.313 2008/09/30 23:59:04 merlinofchaos Exp $
+// $Id: views.module,v 1.317 2008/10/16 17:21:36 merlinofchaos Exp $
 /**
  * @file
  * Primarily Drupal hooks and global API functions to manipulate views.
@@ -105,15 +105,29 @@ function views_theme() {
  * The 'modules/node.views.inc' file is a better place for this, but
  * we haven't got a chance to load that file before Drupal builds the
  * node portion of the theme registry.
- *
- * @todo Remove this in Drupal 7, as it has a code registry.
  */
 function views_preprocess_node(&$vars) {
   // The 'view' attribute of the node is added in template_preprocess_views_view_row_node()
   if (!empty($vars['node']->view) && !empty($vars['node']->view->name)) {
+    $vars['view'] = &$vars['node']->view;
     $vars['template_files'][] = 'node-view-' . $vars['node']->view->name;
     if(!empty($vars['node']->view->current_display)) {
       $vars['template_files'][] = 'node-view-' . $vars['node']->view->name . '-'. $vars['node']->view->current_display;
+    }
+  }
+}
+
+/**
+ * A theme preprocess function to automatically allow view-based node
+ * templates if called from a view.
+ */
+function views_preprocess_comment_view(&$vars) {
+  // The 'view' attribute of the node is added in template_preprocess_views_view_row_comment()
+  if (!empty($vars['node']->view) && !empty($vars['node']->view->name)) {
+    $vars['view'] = &$vars['node']->view;
+    $vars['template_files'][] = 'comment-view-' . $vars['node']->view->name;
+    if(!empty($vars['node']->view->current_display)) {
+      $vars['template_files'][] = 'comment-view-' . $vars['node']->view->name . '-'. $vars['node']->view->current_display;
     }
   }
 }
@@ -283,6 +297,7 @@ function views_block($op = 'list', $delta = 0, $edit = array()) {
       foreach ($views as $view) {
         $view->init_display();
         foreach ($view->display as $display_id => $display) {
+
           if (isset($display->handler) && !empty($display->handler->definition['uses hook block'])) {
             $result = $display->handler->execute_hook_block();
             if (is_array($result)) {
@@ -334,16 +349,20 @@ function views_block($op = 'list', $delta = 0, $edit = array()) {
       }
 
       // This indicates it's a special one.
-      if (substr($delta, 0, 1) == '$') {
-        list($type, $name, $display_id) = explode('-', $delta);
+      if (substr($delta, 0, 1) == '-') {
+        list($nothing, $type, $name, $display_id) = explode('-', $delta);
+        // Put the - back on.
+        $type = '-' . $type;
         if ($view = views_get_view($name)) {
           if ($view->access($display_id)) {
             $view->set_display($display_id);
             if (isset($view->display_handler)) {
               $output = $view->display_handler->view_special_blocks($type);
+              $view->destroy();
               return $output;
             }
           }
+          $view->destroy();
         }
       }
 
@@ -356,6 +375,7 @@ function views_block($op = 'list', $delta = 0, $edit = array()) {
           $view->destroy();
           return $output;
         }
+        $view->destroy();
       }
       break;
   }
@@ -1095,7 +1115,7 @@ function views_views_exportables($op = 'list', $views = NULL, $name = 'foo') {
 
   if ($op == 'export') {
     $code = "/**\n";
-    $code .= " * Implementation of hook_default_view_views().\n";
+    $code .= " * Implementation of hook_views_default_views().\n";
     $code .= " */\n";
     $code .= "function " . $name . "_views_default_views() {\n";
     foreach ($views as $view => $truth) {

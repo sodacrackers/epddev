@@ -1,5 +1,5 @@
 <?php
-// $Id: views_handler_filter_term_node_tid.inc,v 1.2 2008/09/22 18:13:51 merlinofchaos Exp $
+// $Id: views_handler_filter_term_node_tid.inc,v 1.5 2008/10/20 21:32:28 merlinofchaos Exp $
 
 /**
  * Filter by term id
@@ -115,20 +115,47 @@ class views_handler_filter_term_node_tid extends views_handler_filter_many_to_on
         }
       }
 
-      // Since we're overriding, allow the list of options to be reduced.
-      if (!empty($form_state['exposed']) && !empty($this->options['expose']['reduce'])) {
-        $options = $this->reduce_value_options($options);
-      }
+      $default_value = (array) $this->value;
 
+      if (!empty($form_state['exposed'])) {
+        $identifier = $this->options['expose']['identifier'];
+
+        if (!empty($this->options['expose']['reduce'])) {
+          $options = $this->reduce_value_options($options);
+
+          if (empty($this->options['expose']['single']) && !empty($this->options['expose']['optional'])) {
+            $default_value = array();
+          }
+        }
+
+        if (!empty($this->options['expose']['single'])) {
+          if (!empty($this->options['expose']['optional']) && (empty($default_value) || !empty($this->options['expose']['reduce']))) {
+            $default_value = 'All';
+          }
+          else if (empty($default_value)) {
+            $keys = array_keys($options);
+            $default_value = array_shift($keys);
+          }
+          else {
+            $copy = $default_value;
+            $default_value = array_shift($copy);
+          }
+        }
+      }
       $form['value'] = array(
         '#type' => 'select',
         '#title' => t('Select terms from vocabulary @voc', array('@voc' => $vocabulary->name)),
         '#multiple' => TRUE,
         '#options' => $options,
         '#size' => min(9, count($options)),
-        '#default_value' => !empty($this->value) ? $this->value : array(),
+        '#default_value' => $default_value,
       );
+
+      if (!empty($form_state['exposed']) && !isset($form_state['input'][$identifier])) {
+        $form_state['input'][$identifier] = $default_value;
+      }
     }
+
 
     if (empty($form_state['exposed'])) {
       // Retain the helper option
@@ -151,8 +178,12 @@ class views_handler_filter_term_node_tid extends views_handler_filter_many_to_on
   }
 
   function accept_exposed_input($input) {
-    $rc = parent::accept_exposed_input($input);
+    // If it's optional and there's no value don't bother filtering.
+    if ($this->options['expose']['optional'] && empty($this->validated_exposed_input)) {
+      return FALSE;
+    }
 
+    $rc = parent::accept_exposed_input($input);
     if ($rc) {
       // If we have previously validated input, override.
       if (isset($this->validated_exposed_input)) {
@@ -172,8 +203,8 @@ class views_handler_filter_term_node_tid extends views_handler_filter_many_to_on
 
     // We only validate if they've chosen the text field style.
     if ($this->options['type'] != 'textfield') {
-      if (!empty($this->options['expose']['single']) && $form_state['values'][$identifier] != 'All')  {
-        $this->validated_exposed_input = array($form_state['values'][$identifier]);
+      if ($form_state['values'][$identifier] != 'All')  {
+        $this->validated_exposed_input = (array) $form_state['values'][$identifier];
       }
       return;
     }

@@ -1,5 +1,5 @@
 <?php
-// $Id: plugins.inc,v 1.12 2008/09/03 02:13:19 sdboyer Exp $
+// $Id: plugins.inc,v 1.12.2.4 2008/10/11 01:54:40 sdboyer Exp $
 
 
 /**
@@ -522,7 +522,7 @@ function panels_get_pane_content($display, $pane, $args = array(), $context = NU
   if (!$context) {
     $context = new panels_context;
   }
-  // FIXME misplaced bang?
+
   if (!$incoming_content === '') {
     $incoming_content = t('Incoming content will be displayed here.');
   }
@@ -535,7 +535,6 @@ function panels_get_pane_content($display, $pane, $args = array(), $context = NU
   else {
     $content = panels_ct_get_content($pane->type, $pane->subtype, $pane->configuration, $args, $context, $incoming_content);
     foreach (module_implements('panels_pane_content_alter') as $module) {
-      // TODO This makes the third hook invocation on the render path. How badly is this hindering performance?
       $function = $module . '_panels_pane_content_alter';
       $function($content, $pane, $args, $context);
     }
@@ -782,21 +781,14 @@ function panels_argument_choose_display($type, $conf, $context) {
 }
 
 /**
- * Determine a unique context ID for an argument
- */
-function panels_argument_context_id($argument) {
-  return "argument_$argument[name]_$argument[id]";
-}
-
-/**
  * Retrieve a list of empty contexts for all arguments
  */
 function panels_argument_get_contexts($arguments) {
   $contexts = array();
   foreach ($arguments as $argument) {
-    $context = panels_argument_get_context($argument, NULL, true);
+    $context = panels_argument_get_context($argument, NULL, TRUE);
     if ($context) {
-      $contexts[panels_argument_context_id($argument)] = $context;
+      $contexts[panels_context_id($argument, 'argument')] = $context;
     }
   }
   return $contexts;
@@ -819,7 +811,7 @@ function panels_argument_load_contexts($arguments, &$contexts, $args) {
   foreach ($arguments as $argument) {
     // pull the argument off the list.
     $arg = array_shift($args);
-    $id = panels_argument_context_id($argument);
+    $id = panels_context_id($argument, 'argument');
 
     // For % arguments embedded in the URL, our context is already loaded.
     // There is no need to go and load it again.
@@ -853,7 +845,7 @@ function panels_argument_load_contexts($arguments, &$contexts, $args) {
 function panels_argument_get_display($arguments, $contexts) {
   $display_candidate = NULL;
   foreach ($arguments as $i => $argument) {
-    $id = panels_argument_context_id($argument);
+    $id = panels_context_id($argument, 'argument');
     if (!empty($contexts[$id]) && !empty($contexts[$id]->data)) {
       $context = $contexts[$id];
       $d = panels_argument_choose_display($argument['name'], $argument['argument_settings'], $context);
@@ -921,18 +913,11 @@ function panels_relationship_get_contexts($relationships, &$contexts) {
       continue;
     }
 
-    $cid = panels_relationship_context_id($rdata);
+    $cid = panels_context_id($rdata, 'relationship');
     if ($context = panels_relationship_get_context($rdata, $contexts[$rdata['context']])) {
       $contexts[$cid] = $context;
     }
   }
-}
-
-/**
- * Determine a unique context ID for an argument
- */
-function panels_relationship_context_id($relationship) {
-  return "relationship_$relationship[name]_$relationship[id]";
 }
 
 /**
@@ -1120,9 +1105,11 @@ function panels_context_create_empty($type) {
  */
 function panels_context_get_keywords($contexts) {
   $keywords = array();
-  foreach ($contexts as $id => $context) {
-    if ($keyword = $context->get_keyword()) {
-      $keywords["%$keyword"] = $context->get_title();
+  if (!empty($contexts)) {
+    foreach ($contexts as $id => $context) {
+      if ($keyword = $context->get_keyword()) {
+        $keywords["%$keyword"] = $context->get_title();
+      }
     }
   }
   return $keywords;
@@ -1130,11 +1117,10 @@ function panels_context_get_keywords($contexts) {
 
 /**
  * Determine a unique context ID for a context
- *
- * @todo can probably combine the various versions of this.
  */
-function panels_context_context_id($context, $type = 'context') {
+function panels_context_id($context, $type = 'context') {
   return $type . "_$context[name]_$context[id]";
+  // return $type . "_{$context['name']}_{$context['id']}";
 }
 
 /**
@@ -1164,7 +1150,7 @@ function panels_context_get_contexts($contexts, $type = 'context') {
   foreach ($contexts as $context) {
     $ctext = panels_context_get_context($context, $type);
     if ($ctext) {
-      $return[panels_context_context_id($context, $type)] = $ctext;
+      $return[panels_context_id($context, $type)] = $ctext;
     }
   }
   return $return;
@@ -1212,7 +1198,7 @@ function panels_context_match_required_contexts($required, $contexts) {
   }
 
   foreach ($required as $r) {
-    $return[panels_context_context_id($r, 'requiredcontext')] = array_shift($contexts);
+    $return[panels_context_id($r, 'requiredcontext')] = array_shift($contexts);
   }
 
   return $return;
@@ -1222,9 +1208,11 @@ function panels_context_match_required_contexts($required, $contexts) {
  * Return the first context with a form id from a list of contexts.
  */
 function panels_context_get_form($contexts) {
-  foreach ($contexts as $context) {
-    if (!empty($context->form_id)) {
-      return $context;
+  if (!empty($contexts)) {
+    foreach ($contexts as $context) {
+      if (!empty($context->form_id)) {
+        return $context;
+      }
     }
   }
 }
@@ -1508,6 +1496,9 @@ function _panels_process_plugin($module, $identifier, $path, $hook) {
 /**
  * Fetch a group of plugins by name.
  *
+ * This function is the master static cache through which all calls to plugins
+ * pass; metadata about those plugins is all statically cached here.
+ *
  * @param $plugin
  *   This is the name of the plugin, and also the name of the directory.
  * @param $hook
@@ -1556,7 +1547,7 @@ function panels_get_plugins($plugin, $hook, $id = NULL) {
 }
 
 /**
- * Fetch a layout plugin
+ * Fetch metadata on a specific layout plugin.
  *
  * @param $layout
  *   Name of a panel layout.
@@ -1569,7 +1560,7 @@ function panels_get_layout($layout) {
 }
 
 /**
- * Fetch all layout plugins
+ * Fetch metadata for all layout plugins.
  *
  * @return
  *   An array of arrays with information about all available panel layouts.
@@ -1579,7 +1570,7 @@ function panels_get_layouts() {
 }
 
 /**
- * Collate information about a specific panel style.
+ * Fetch metadata on a specific style plugin.
  *
  * @param $style
  *   Name of a panel style.
@@ -1592,7 +1583,7 @@ function panels_get_style($style) {
 }
 
 /**
- * Collate information about all available panel styles.
+ * Fetch metadata for all style plugins.
  *
  * @return
  *   An array of arrays with information about all available panel styles.
@@ -1602,7 +1593,7 @@ function panels_get_styles() {
 }
 
 /**
- * Collate information about a specific panel argument.
+ * Fetch metadata on a specific argument plugin.
  *
  * @param $argument
  *   Name of a panel argument.
@@ -1615,7 +1606,7 @@ function panels_get_argument($argument) {
 }
 
 /**
- * Collate information about all available panel arguments.
+ * Fetch metadata for all argument plugins.
  *
  * @return
  *   An array of arrays with information about all available panel arguments.
@@ -1625,7 +1616,7 @@ function panels_get_arguments() {
 }
 
 /**
- * Fetch a content_type plugin
+ * Fetch metadata on a specific content_type plugin.
  *
  * @param $content type
  *   Name of a panel content type.
@@ -1638,7 +1629,7 @@ function panels_get_content_type($content_type) {
 }
 
 /**
- * Fetch all content type plugins
+ * Fetch metadata for all content_type plugins.
  *
  * @return
  *   An array of arrays with information about all available panel content types.
@@ -1648,7 +1639,7 @@ function panels_get_content_types() {
 }
 
 /**
- * Fetch a relationship plugin
+ * Fetch metadata on a specific relationship plugin.
  *
  * @param $content type
  *   Name of a panel content type.
@@ -1661,7 +1652,7 @@ function panels_get_relationship($relationship) {
 }
 
 /**
- * Fetch all relationship plugins
+ * Fetch metadata for all relationship plugins.
  *
  * @return
  *   An array of arrays with information about all available relationships.
@@ -1671,7 +1662,7 @@ function panels_get_relationships() {
 }
 
 /**
- * Fetch a context plugin
+ * Fetch metadata on a specific context plugin.
  *
  * @param $context
  *   Name of a panel context.
@@ -1684,7 +1675,7 @@ function panels_get_context($context) {
 }
 
 /**
- * Fetch all context plugins
+ * Fetch metadata for all context plugins.
  *
  * @return
  *   An array of arrays with information about all available panel contexts.
@@ -1694,7 +1685,7 @@ function panels_get_contexts() {
 }
 
 /**
- * Fetch a cache plugin
+ * Fetch metadata on a specific caching plugin.
  *
  * @param $cache
  *   Name of a panel cache.
@@ -1707,7 +1698,7 @@ function panels_get_cache($cache) {
 }
 
 /**
- * Fetch all cache plugins
+ * Fetch metadata for all context plugins.
  *
  * @return
  *   An array of arrays with information about all available panel caches.
@@ -1717,7 +1708,7 @@ function panels_get_caches() {
 }
 
 /**
- * Fetch a switcher plugin
+ * Fetch metadata on a specific switcher plugin.
  *
  * @param $switcher
  *   Name of a panel switcher.
@@ -1730,7 +1721,7 @@ function panels_get_switcher($switcher) {
 }
 
 /**
- * Fetch all switcher plugins
+ * Fetch metadata for all switcher plugins.
  *
  * @return
  *   An array of arrays with information about all available panel switchers.

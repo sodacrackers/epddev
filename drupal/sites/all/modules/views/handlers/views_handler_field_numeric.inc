@@ -1,5 +1,5 @@
 <?php
-// $Id: views_handler_field_numeric.inc,v 1.1 2008/09/03 19:21:28 merlinofchaos Exp $
+// $Id: views_handler_field_numeric.inc,v 1.3 2008/10/18 01:46:39 merlinofchaos Exp $
 /**
  * Render a field as a numeric value
  *
@@ -80,7 +80,8 @@ class views_handler_field_numeric extends views_handler_field {
       $remainder = abs($value) - intval(abs($value));
       $value = number_format($value, 0, '', $this->options['separator']);
       if ($remainder) {
-        $value .= $this->options['decimal'] . $remainder;
+        // The substr may not be locale safe.
+        $value .= $this->options['decimal'] . substr($remainder, 2);
       }
     }
     return check_plain($this->options['prefix'] . $value . $this->options['suffix']);

@@ -1,5 +1,5 @@
 <?php
-// $Id: views_handler_filter_string.inc,v 1.2 2008/09/10 01:08:06 merlinofchaos Exp $
+// $Id: views_handler_filter_string.inc,v 1.5 2008/10/20 20:05:48 merlinofchaos Exp $
 
 /**
  * Basic textfield filter to handle string filtering commands
@@ -107,8 +107,16 @@ class views_handler_filter_string extends views_handler_filter {
   }
 
   function admin_summary() {
+    if (!empty($this->options['exposed'])) {
+      return t('exposed');
+    }
+
     $options = $this->operator_options('short');
-    return (!empty($this->options['exposed']) ? t('exposed') : $options[$this->operator]);
+    $output = check_plain($options[$this->operator]);
+    if (in_array($this->operator, $this->operator_values(1))) {
+      $output .= ' ' . check_plain($this->value);
+    }
+    return $output;
   }
 
   function options_form(&$form, &$form_state) {
@@ -117,7 +125,7 @@ class views_handler_filter_string extends views_handler_filter {
       '#type' => 'checkbox',
       '#title' => t('Case sensitive'),
       '#default_value' => $this->options['case'],
-      '#description' => t('Case sensitive filters may be faster; MySQL might ignore case sensitivity.'),
+      '#description' => t('Case sensitive filters may be faster. MySQL might ignore case sensitivity.'),
     );
   }
 
@@ -173,6 +181,14 @@ class views_handler_filter_string extends views_handler_filter {
           '#dependency' => array($source => $this->operator_values(1)),
         );
       }
+    }
+
+    if (!isset($form['value'])) {
+      // Ensure there is something in the 'value'.
+      $form['value'] = array(
+        '#type' => 'value',
+        '#value' => NULL
+      );
     }
   }
 

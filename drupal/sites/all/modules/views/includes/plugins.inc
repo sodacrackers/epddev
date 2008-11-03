@@ -1,5 +1,5 @@
 <?php
-// $Id: plugins.inc,v 1.148 2008/09/11 22:47:42 merlinofchaos Exp $
+// $Id: plugins.inc,v 1.150 2008/10/14 18:58:01 merlinofchaos Exp $
 /**
  * @file plugins.inc
  * Built in plugins for Views output handling.
@@ -133,7 +133,7 @@ function views_views_plugins() {
       ),
       'default_summary' => array(
         'title' => t('List'),
-        'help' => t('Displays the default summary summary as a list.'),
+        'help' => t('Displays the default summary as a list.'),
         'handler' => 'views_plugin_style_summary',
         'theme' => 'views_view_summary',
         'type' => 'summary', // only shows up as a summary style
@@ -340,7 +340,7 @@ class views_plugin extends views_object {
   function additional_theme_functions() {
     $funcs = array();
     if (!empty($this->definition['additional themes'])) {
-      foreach ($this->definition['additional themes'] as $theme) {
+      foreach ($this->definition['additional themes'] as $theme => $type) {
         $funcs[] = views_theme_functions($theme, $this->view, $this->display);
       }
     }

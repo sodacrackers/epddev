@@ -1,5 +1,5 @@
 <?php
-// $Id: content.crud.inc,v 1.76.2.9 2008/08/26 22:45:40 yched Exp $
+// $Id: content.crud.inc,v 1.76.2.11 2008/10/07 11:55:17 karens Exp $
 
 /**
  * @file
@@ -85,7 +85,7 @@ function content_instance_default_values($field_name, $type_name, $widget_type) 
     $widget['widget_active'] = 1;
   }
 
-  $settings_names = array_merge(array('label'), array_keys(_content_admin_display_contexts()));
+  $settings_names = array_merge(array('label'), array_keys(content_build_modes()));
   $widget['display_settings'] = array();
   foreach ($settings_names as $name) {
     $widget['display_settings'][$name]['format'] = ($name == 'label') ? 'above' : 'default';
@@ -109,7 +109,7 @@ function content_field_instance_expand($field) {
   }
   $field['widget'] = !empty($field['widget_settings']) ? $field['widget_settings'] : array();
   $field['widget']['label'] = !empty($field['label']) ? $field['label'] : $field['field_name'];
-  $field['widget']['weight'] = !empty($field['weight']) ? $field['weight'] : NULL;
+  $field['widget']['weight'] = !empty($field['weight']) ? $field['weight'] : 0;
   $field['widget']['description'] = !empty($field['description']) ? $field['description'] : '';
 
   if (!empty($field['widget_type'])) {

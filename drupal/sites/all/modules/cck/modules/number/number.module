@@ -1,5 +1,5 @@
 <?php
-// $Id: number.module,v 1.91.2.16 2008/09/01 15:50:08 yched Exp $
+// $Id: number.module,v 1.91.2.23 2008/10/06 15:11:39 karens Exp $
 
 /**
  * @file
@@ -18,6 +18,7 @@ function number_theme() {
     'number_formatter_us_2' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
     'number_formatter_be_0' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
     'number_formatter_be_1' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
+    'number_formatter_be_2' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
     'number_formatter_fr_0' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
     'number_formatter_fr_1' => array('arguments' => array('element' => NULL), 'function' => 'theme_number_formatter_generic'),
     'number_formatter_unformatted' => array('arguments' => array('element' => NULL)),
@@ -227,6 +228,7 @@ function number_field($op, &$node, $field, &$items, $teaser, $page) {
       if (is_array($items)) {
         foreach ($items as $delta => $item) {
           $error_element = isset($item['_error_element']) ? $item['_error_element'] : '';
+          if (is_array($item) && isset($item['_error_element'])) unset($item['_error_element']);
           if ($item['value'] != '') {
             if (is_numeric($field['min']) && $item['value'] < $field['min']) {
               form_set_error($error_element, t('%name: the value may be no smaller than %min.', array('%name' => t($field['widget']['label']), '%min' => $field['min'])));
@@ -234,8 +236,19 @@ function number_field($op, &$node, $field, &$items, $teaser, $page) {
             if (is_numeric($field['max']) && $item['value'] > $field['max']) {
               form_set_error($error_element, t('%name: the value may be no larger than %max.', array('%name' => t($field['widget']['label']), '%max' => $field['max'])));
             }
-            if (count($allowed_values) && !array_key_exists($item['value'], $allowed_values)) {
-              form_set_error($error_element, t('%name: illegal value.', array('%name' => t($field['widget']['label']))));
+            if (count($allowed_values)) {
+              // We cannot use array_key_exists() because allowed values are
+              // stored as strings, and we need to compare numeric equality.
+              $valid = FALSE;
+              foreach ($allowed_values as $kay => $value) {
+                if ((float) $item['value'] == (float) $kay) {
+                  $valid = TRUE;
+                  break;
+                }
+              }
+              if (!$valid) {
+                form_set_error($error_element, t('%name: illegal value.', array('%name' => t($field['widget']['label']))));
+              }
             }
           }
         }
@@ -258,7 +271,6 @@ function number_content_is_empty($item, $field) {
  * Implementation of hook_field_formatter_info().
  */
 function number_field_formatter_info() {
-
   return array(
     'default' => array('label' => '9999',            'multiple values' => CONTENT_HANDLE_CORE, 'field types' => array('number_integer', 'number_decimal', 'number_float')),
     'us_0'    => array('label' => '9,999',           'multiple values' => CONTENT_HANDLE_CORE, 'field types' => array('number_integer', 'number_decimal', 'number_float')),
@@ -457,6 +469,11 @@ function number_process($element, $edit, $form_state, $form) {
 
   $prefixes = array();
   $suffixes = array();
+
+  // Make sure we don't wipe out element validation added elsewhere.
+  if (empty($element['#element_validate'])) {
+    $element['#element_validate'] = array();
+  }
   if (!empty($field['prefix'])) {
     $prefixes = explode('|', $field['prefix']);
     $element[$field_key]['#field_prefix'] = array_pop($prefixes);
@@ -467,13 +484,13 @@ function number_process($element, $edit, $form_state, $form) {
   }
   switch ($field['type']) {
     case 'number_float':
-      $element['#element_validate'] = array('number_float_validate');
+      $element['#element_validate'][] = 'number_float_validate';
       break;
     case 'number_integer':
-      $element['#element_validate'] = array('number_integer_validate');
+      $element['#element_validate'][] = 'number_integer_validate';
       break;
     case 'number_decimal':
-      $element['#element_validate'] = array('number_decimal_validate');
+      $element['#element_validate'][] = 'number_decimal_validate';
       $element['#decimal'] = isset($field['decimal']) ? $field['decimal'] : '.';
       $element['#precision'] = isset($field['precision']) ? $field['precision'] : 10;
       $element['#scale'] = isset($field['scale']) ? $field['scale'] : 2;

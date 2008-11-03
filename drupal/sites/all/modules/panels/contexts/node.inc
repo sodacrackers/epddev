@@ -1,5 +1,5 @@
 <?php
-// $Id: node.inc,v 1.7 2008/08/31 14:48:29 sdboyer Exp $
+// $Id: node.inc,v 1.7.2.3 2008/10/12 05:45:44 sdboyer Exp $
 
 
 /**
@@ -95,7 +95,7 @@ function panels_context_node_settings_form($conf, $external = FALSE) {
   if (!empty($conf['nid'])) {
     $info = db_fetch_object(db_query("SELECT * FROM {node} n WHERE n.nid = %d", $conf['nid']));
     if ($info) {
-      $link = l("'$info->title' [node id: $info->nid]", "node/$info->nid", array('target' => '_blank', 'title' => t('Open in new window')));
+      $link = l(t("'%title' [node id %nid]", array('%title' => $info->title, '%nid' => $info->nid)), "node/$info->nid", array('target' => '_blank', 'title' => t('Open in new window')));
       $form['node']['#description'] = t('Currently set to !link', array('!link' => $link));
     }
   }
@@ -120,17 +120,16 @@ function panels_context_node_settings_form($conf, $external = FALSE) {
  */
 function panels_context_node_settings_form_validate($form, &$form_state) {
   // Validate the autocomplete
-  $form_values = $form_state['value'];
-  if (empty($form_values['external']) && empty($form_values['nid']) && empty($form_values['node'])) {
+  if (empty($form_state['values']['external']) && empty($form_state['values']['nid']) && empty($form_state['values']['node'])) {
     form_error($form['node'], t('You must select a node.'));
     return;
   }
 
-  if (empty($form_values['node'])) {
+  if (empty($form_state['values']['node'])) {
     return;
   }
 
-  $nid = $form_values['node'];
+  $nid = $form_state['values']['node'];
   $preg_matches = array();
   $match = preg_match('/\[nid: (\d+)\]/', $nid, $preg_matches);
   if (!$match) {
@@ -151,13 +150,14 @@ function panels_context_node_settings_form_validate($form, &$form_state) {
     form_error($form['node'], t('Invalid node selected.'));
   }
   else {
-    $form_values['nid'] = $node->nid;
+    form_set_value($form['nid'], $node->nid, $form_state);
+    // $form_state['values']['nid'] = $node->nid;
   }
 }
 
 function panels_context_node_settings_form_submit($form, &$form_state) {
   if ($form_state['values']['set_identifier']) {
-    $node = node_load($form_values['nid']);
+    $node = node_load($form_state['values']['nid']);
     $form_state['values']['context']['identifier'] = $node->title;
   }
 

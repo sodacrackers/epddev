@@ -1,5 +1,5 @@
 <?php
-// $Id: view.inc,v 1.132 2008/09/30 18:52:15 merlinofchaos Exp $
+// $Id: view.inc,v 1.136 2008/10/16 17:06:25 merlinofchaos Exp $
 /**
  * @file view.inc
  * Provides the view object type and associated methods.
@@ -258,7 +258,7 @@ class view extends views_db_object {
     if (empty($this->display[$display_id])) {
       $display_id = 'default';
       if (empty($this->display[$display_id])) {
-        vpr(t('set_display called with invalid display id @display', array('@display' => $display_id)));
+        vpr(t('set_display() called with invalid display id @display.', array('@display' => $display_id)));
         return FALSE;
       }
     }
@@ -533,6 +533,12 @@ class view extends views_db_object {
       }
     }
 
+    // Let modules modify the view just prior to executing it.
+    foreach (module_implements('views_pre_build') as $module) {
+      $function = $module . '_views_pre_build';
+      $function($this);
+    }
+
     // Attempt to load from cache.
     // @todo Load a build_info from cache.
 
@@ -650,6 +656,12 @@ class view extends views_db_object {
       return TRUE;
     }
 
+    // Let modules modify the view just prior to executing it.
+    foreach (module_implements('views_pre_execute') as $module) {
+      $function = $module . '_views_pre_execute';
+      $function($this);
+    }
+
     $query = db_rewrite_sql($this->build_info['query'], $this->base_table, $this->base_field, array('view' => &$this));
     $count_query = db_rewrite_sql($this->build_info['count_query'], $this->base_table, $this->base_field, array('view' => &$this));
 
@@ -750,6 +762,12 @@ class view extends views_db_object {
     $this->init_style();
 
     $this->style_plugin->pre_render($this->result);
+
+    // Let modules modify the view just prior to executing it.
+    foreach (module_implements('views_pre_render') as $module) {
+      $function = $module . '_views_pre_view';
+      $function($this);
+    }
 
     // Give field handlers the opportunity to perform additional queries
     // using the entire resultset prior to rendering.
@@ -1285,7 +1303,7 @@ class view extends views_db_object {
 
     cache_clear_all('views_query:' . $this->name, 'cache_views');
     cache_clear_all(); // In Drupal 5.0 and later this clears the page cache only.
-
+    menu_rebuild(); // force a menu rebuild when a view is deleted.
   }
 
   /**
@@ -1394,6 +1412,7 @@ class view extends views_db_object {
     foreach (array_keys($this->display) as $display_id) {
       if (isset($this->display[$display_id]->handler)) {
         $this->display[$display_id]->handler->destroy();
+        unset($this->display[$display_id]->handler);
       }
 
       foreach (views_object_types() as $type => $info) {

@@ -1,5 +1,5 @@
 <?php
-// $Id: optionwidgets.module,v 1.69.2.14 2008/09/06 15:54:34 yched Exp $
+// $Id: optionwidgets.module,v 1.69.2.18 2008/10/06 15:11:39 karens Exp $
 
 /**
  * @file
@@ -12,10 +12,11 @@
 function optionwidgets_form_alter(&$form, $form_state, $form_id) {
   // Provide additional help for the field settings form.
   if ($form_id == 'content_field_edit_form' && isset($form['widget'])) {
-    $widget_type = $form['main']['widget_type']['#default_value'];
-    $field_type = $form['main']['type']['#value'];
+    $widget_type = $form['#field']['widget']['type'];
+    $field_type = $form['#field']['type'];
+    $label = $form['#field']['widget']['label'];
 
-    $output = '<p>'. t('Create a list of options as a list in <strong>Allowed values list</strong> or as an array in PHP code. These values will be the same for %field in all content types.', array('%field' => $form['main']['label']['#value'])) .'</p>';
+    $output = '<p>'. t('Create a list of options as a list in <strong>Allowed values list</strong> or as an array in PHP code. These values will be the same for %field in all content types.', array('%field' => $label)) .'</p>';
 
     if ($widget_type == 'optionwidgets_onoff') {
       $output .= '<p>'. t("For a 'single on/off checkbox' widget, define the 'off' value first, then the 'on' value in the <strong>Allowed values</strong> section. Note that the checkbox will be labeled with the label of the 'on' value.") .'</p>';
@@ -116,19 +117,16 @@ function optionwidgets_elements() {
     'optionwidgets_select' => array(
       '#input' => TRUE,
       '#columns' => array('value'), '#delta' => 0,
-      '#element_validate' => array('optionwidgets_validate'),
       '#process' => array('optionwidgets_select_process'),
       ),
     'optionwidgets_buttons' => array(
       '#input' => TRUE,
       '#columns' => array('value'), '#delta' => 0,
-      '#element_validate' => array('optionwidgets_validate'),
       '#process' => array('optionwidgets_buttons_process'),
       ),
     'optionwidgets_onoff' => array(
       '#input' => TRUE,
       '#columns' => array('value'), '#delta' => 0,
-      '#element_validate' => array('optionwidgets_validate'),
       '#process' => array('optionwidgets_onoff_process'),
       ),
     );
@@ -195,11 +193,18 @@ function optionwidgets_buttons_process($element, $edit, &$form_state, $form) {
     '#type' => $field['multiple'] ? 'checkboxes' : 'radios',
     '#title' => $element['#title'],
     '#description' => $element['#description'],
-    '#required' => $field['required'],
-    '#multiple' => $field['multiple'],
+    '#required' => isset($element['#required']) ? $element['#required'] : $field['required'],
+    '#multiple' => isset($element['#multiple']) ? $element['#multiple'] : $field['multiple'],
     '#options' => $options,
     '#default_value' => isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : NULL,
   );
+
+  // Set #element_validate in a way that it will not wipe out other
+  // validation functions already set by other modules.
+  if (empty($element['#element_validate'])) {
+    $element['#element_validate'] = array();
+  }
+  array_unshift($element['#element_validate'], 'optionwidgets_validate');
 
   // Make sure field info will be available to the validator which
   // does not get the values in $form.
@@ -231,11 +236,18 @@ function optionwidgets_select_process($element, $edit, &$form_state, $form) {
     '#type' => 'select',
     '#title' => $element['#title'],
     '#description' => $element['#description'],
-    '#required' => $field['required'],
-    '#multiple' => $field['multiple'],
+    '#required' => isset($element['#required']) ? $element['#required'] : $field['required'],
+    '#multiple' => isset($element['#multiple']) ? $element['#multiple'] : $field['multiple'],
     '#options' => $options,
     '#default_value' => isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : NULL,
   );
+
+  // Set #element_validate in a way that it will not wipe out other
+  // validation functions already set by other modules.
+  if (empty($element['#element_validate'])) {
+    $element['#element_validate'] = array();
+  }
+  array_unshift($element['#element_validate'], 'optionwidgets_validate');
 
   // Make sure field info will be available to the validator which
   // does not get the values in $form.
@@ -244,7 +256,6 @@ function optionwidgets_select_process($element, $edit, &$form_state, $form) {
   // causes the node's hook_form_alter to be invoked twice, garbling the
   // results. Need to investigate why that is happening (a core bug?), but
   // in the meantime avoid using $form_state['storage'] to store anything.
-
   $form_state['#field_info'][$field['field_name']] = $field;
   return $element;
 }
@@ -277,6 +288,13 @@ function optionwidgets_onoff_process($element, $edit, &$form_state, $form) {
     '#default_value' => isset($element['#value'][$field_key][0]) ? $element['#value'][$field_key][0] == $on_value : FALSE,
     '#return_value' => $on_value,
   );
+
+  // Set #element_validate in a way that it will not wipe out other
+  // validation functions already set by other modules.
+  if (empty($element['#element_validate'])) {
+    $element['#element_validate'] = array();
+  }
+  array_unshift($element['#element_validate'], 'optionwidgets_validate');
 
   // Make sure field info will be available to the validator which
   // does not get the values in $form.

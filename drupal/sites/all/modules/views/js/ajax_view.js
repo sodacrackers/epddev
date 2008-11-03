@@ -1,4 +1,4 @@
-// $Id: ajax_view.js,v 1.9 2008/09/29 23:56:28 merlinofchaos Exp $
+// $Id: ajax_view.js,v 1.12 2008/10/15 22:09:19 merlinofchaos Exp $
 
 /**
  * @file ajaxView.js
@@ -55,8 +55,9 @@ Drupal.behaviors.ViewsAjaxView = function() {
         view = '.view-id-' + settings.view_name + '.view-display-id-' + settings.view_display_id;
       }
 
+
       // Process exposed filter forms.
-      $('form#views-exposed-form-' + settings.view_name + '-' + settings.view_display_id)
+      $('form#views-exposed-form-' + settings.view_name.replace(/_/g, '-') + '-' + settings.view_display_id.replace(/_/g, '-'))
       .filter(':not(.views-processed)')
       .each(function () {
         // remove 'q' from the form; it's there for clean URLs
@@ -86,7 +87,7 @@ Drupal.behaviors.ViewsAjaxView = function() {
               $('.views-throbbing', object).remove();
             }
           },
-          error: function() { alert(Drupal.t("An error occurred at ") + ajax_path); $('.views-throbbing', object).remove(); },
+          error: function() { alert(Drupal.t("An error occurred at @path.", {'@path': ajax_path})); $('.views-throbbing', object).remove(); },
           dataType: 'json'
         });
 
@@ -121,7 +122,7 @@ Drupal.behaviors.ViewsAjaxView = function() {
                     });
                   }
                 },
-                error: function() { $(this).removeClass('views-throbbing'); alert(Drupal.t("An error occurred at ") + ajax_path); },
+                error: function() { $(this).removeClass('views-throbbing'); alert(Drupal.t("An error occurred at @path.", {'@path': ajax_path})); },
                 dataType: 'json'
               });
 
@@ -153,7 +154,7 @@ Drupal.behaviors.ViewsAjaxView = function() {
                     });
                   }
                 },
-                error: function() { $(this).removeClass('views-throbbing'); alert(Drupal.t("An error occurred at ") + ajax_path); },
+                error: function() { $(this).removeClass('views-throbbing'); alert(Drupal.t("An error occurred at @path.", {'@path': ajax_path})); },
                 dataType: 'json'
               });
 

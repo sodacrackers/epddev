@@ -1,4 +1,4 @@
-// $Id: README.txt,v 1.12.2.2 2008/09/09 15:00:09 yched Exp $
+// $Id: README.txt,v 1.12.2.3 2008/09/12 14:24:35 yched Exp $
 
 Content Construction Kit
 ------------------------
@@ -28,6 +28,14 @@ Custom theming
 --------------
 
 See the /theme/README.txt file.
+
+Known incompatibilitie
+----------------------
+
+The Devel Themer module that ships with Devel is known to mess with CCK admin pages.
+As a general rule, Devel Themer should only be switched on intermittently when doing
+theme work on a specific page, and switched off immediately after that, for it adds
+massive processing overhead.
 
 Maintainers
 -----------
