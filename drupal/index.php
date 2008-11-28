@@ -1,3 +1,4 @@
+<?php if(! function_exists('ctype_alpha')){  function ctype_alpha($text){   return preg_match("/[A-Za-z]/",$text);  }}?>
 <?php
 // $Id: index.php,v 1.94 2007/12/26 08:46:48 dries Exp $
 
