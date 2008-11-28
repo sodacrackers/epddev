@@ -1,0 +1,38 @@
+<?php
+/*
+ * 
+ */
+
+function epQuestions_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) 
+{
+	if($op == 'presave' && !user_access('administer comments') && empty($node->title)) {
+		$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : null; // first \s after 50
+		$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
+	}
+	
+}
+
+function epQuestions_form_alter(&$form, $form_state, $form_id) 
+{
+	global $user;
+	// hide the title field for non-admins
+	if($form_id == 'question_node_form' && !user_access('administer comments')) 
+	{ 
+		$form['title']['#type'] = 'hidden';
+		$form['title']['#default_value'] = 'New Question on Elephant Parents';
+		$form['body_field']['body']['#title'] = 'Your Question';
+	}
+}
+
+
+function null_epQuestions_db_rewrite_sql($query, $primary_table, $primary_field, $args) {
+}
+function null_epQuestions_link_alter(&$links, $node) {
+}
+function null_epQuestions_comment(&$a1, $op) {
+}
+function null_epQuestions_preprocess_comment_wrapper(&$variables) {
+}
+function null_epQestions_comment_block() {
+}
+
