@@ -1,0 +1,28 @@
+#!/bin/bash
+
+date_ymd=$(date +%Y-%m-%d)
+date_dy=$(date +%a)
+
+(date) >> /clog.txt
+
+#mysqldump .all-databases -hlocalhost -uelephantparents -proyale >> /backups/$date_dy.sql
+mysqldump .all-databases -hdb1.modwest.com -uelephantparents -proyale >> /backups/$date_dy.sql
+
+
+# call the drupal cron
+/usr/bin/wget -q http://dev.elephantparents.com/cron.php >> /clog.txt
+
+
+# daily zip backup
+tar  -zcf /backups/www_backup_$date_dy.tar.gz /htdocs/www >> /clog.txt
+
+
+# full backup sundays
+tar  -zcf /backups/www_backup_$date_ymd.tar.gz /htdocs/www >> /clog.txt
+
+
+
+
+# /dev/null 2>&1
+
+

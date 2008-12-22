@@ -1,0 +1,23 @@
+MAILTO=alpinenick@gmail.com
+
+# m[0-59] hr[0-23] d[1-31] m[1-12] d[0-6 with 0=Sunday] command  
+
+
+
+
+0 0 * * * `date` /htdocs/www >> /cronlog.txt 
+
+# run drupal cron
+0 0 * * * /usr/bin/wget -O -q http://dev.elephantparents.com/cron.php   2>&1 >> /cronlog.txt 
+
+# daily zip backup
+0 0 * * * tar  -zcf backups/www_backup_`date +\%a.tar.gz` /htdocs/www    2>&1 >> /cronlog.txt 
+
+# full backup sundays
+0 0 * * 7 tar  -zcf backups/www_backup_`date +\%Y-\%m-\%d`.tar.gz /htdocs/www     2>&1 >> /cronlog.txt 
+
+
+
+
+
+# /dev/null 2>&1
