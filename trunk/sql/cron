@@ -1,0 +1,6 @@
+MAILTO=alpinenick@gmail.com
+# m[0-59] hr[0-23] d[1-31] m[1-12] d[0-6 with 0=Sunday] command  
+
+
+0 0 * * * bash cronjob_script
+
