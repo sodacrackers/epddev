@@ -1,0 +1,38 @@
+<?php
+/*
+ * Quick block for profile information on user blog pages
+ */
+
+/**
+ * Implementation of hook_block
+ */
+function epBlogs_block($op = 'list', $delta = 0, $edit = array()) {
+	$blocks = array();
+	if ($op == 'view') 
+	{
+		global $node, $user;
+		$blocks['subject'] = variable_get('tagadelic_block_title_'. $delta, t('Tags in @voc', array('@voc' => $voc->name)));
+		$blocks['content'] .= theme('tagadelic_more', $voc->vid);//add more link
+		return $blocks;
+	}
+	elseif ($op == 'list') 
+	{
+		$blocks[0]['info'] = t('EP Info on My Blogs');
+		$blocks[0]['cache'] = BLOCK_CACHE_PER_PAGE;
+		return $blocks;
+	}
+	elseif ($op == 'configure') 
+	{}
+	elseif ($op == 'save') 
+	{}
+}
+
+
+
+function epBlogs_personal_blog_block()
+{
+
+
+}
+
+
