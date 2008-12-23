@@ -1,13 +1,23 @@
 <?php
 /*
- * 
+ * Some quick hooks for moving question-type nodes
+ * to question-answer style
  */
 
 function epQuestions_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) 
 {
-	if($op == 'presave' && !user_access('administer comments') && empty($node->title)) {
-		$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : null; // first \s after 50
-		$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
+	if($node->type == 'question') 
+	{
+		if($op == 'presave' && !user_access('administer comments') && empty($node->title) || $node->title == 'Question') 
+		{
+			$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : null; // first \s after 50
+			$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
+		}
+		if($op == 'view' && $a4 == true)
+		{
+			$node->content['#title'] = 'Question: ' . $node->title;
+			$node->title = 'Question: ' . $node->title;
+		}
 	}
 	
 }
@@ -19,7 +29,7 @@ function epQuestions_form_alter(&$form, $form_state, $form_id)
 	if($form_id == 'question_node_form' && !user_access('administer comments')) 
 	{ 
 		$form['title']['#type'] = 'hidden';
-		$form['title']['#default_value'] = 'New Question on Elephant Parents';
+		$form['title']['#default_value'] = 'Question';
 		$form['body_field']['body']['#title'] = 'Your Question';
 	}
 }
