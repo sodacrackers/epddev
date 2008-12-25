@@ -1,4 +1,11 @@
-/* $Id: style.css,v 1.38.2.1 2008/02/05 09:27:26 goba Exp $ */
+
+	/* theme the user-location form */ 
+.view-ep-user-location-table2 .views-exposed-widget {
+	}
+.view-ep-user-location-table2 #edit-distance-postal-code, .view-ep-user-location-table2 #edit-distance-search-distance {
+	width: 25px;
+	}
+	/* $Id: style.css,v 1.38.2.1 2008/02/05 09:27:26 goba Exp $ */
 
 /**
  * Garland, for Drupal 6.x
