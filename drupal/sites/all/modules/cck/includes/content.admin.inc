@@ -1,5 +1,5 @@
 <?php
-// $Id: content.admin.inc,v 1.181.2.49 2008/10/06 15:19:05 karens Exp $
+// $Id: content.admin.inc,v 1.181.2.59 2008/11/10 15:07:10 yched Exp $
 
 /**
  * @file
@@ -93,12 +93,35 @@ function content_fields_list() {
 }
 
 /**
+ * Helper function to display a message about inactive fields.
+ */
+function content_inactive_message($type_name) {
+  $inactive_fields = content_inactive_fields($type_name);
+  if (!empty($inactive_fields)) {
+    $field_types = _content_field_types();
+    $widget_types = _content_widget_types($type_name);
+    drupal_set_message(t('This content type has inactive fields. Inactive fields are not included in lists of available fields until their modules are enabled.'), 'error');
+    foreach ($inactive_fields as $field_name => $field) {
+      drupal_set_message(t('!field (!field_name) is an inactive !field_type field that uses a !widget_type widget.', array(
+      '!field' => $field['widget']['label'],
+      '!field_name' => $field['field_name'],
+      '!field_type' => array_key_exists($field['type'], $field_types) ? $field_types[$field['type']]['label'] : $field['type'],
+      '!widget_type' => array_key_exists($field['widget']['type'], $widget_types) ? $widget_types[$field['widget']['type']]['label'] : $field['widget']['type'],
+      )));
+    }
+  }
+}
+
+/**
  * Menu callback; listing of fields for a content type.
  *
  * Allows fields to be reordered and nested in fieldgroups using
  * JS drag-n-drop. Non-CCK form elements can also be moved around.
  */
 function content_field_overview_form(&$form_state, $type_name) {
+
+  content_inactive_message($type_name);
+
   // When displaying the form, make sure the list of fields
   // is up-to-date.
   if (empty($form_state['post'])) {
@@ -132,7 +155,6 @@ function content_field_overview_form(&$form_state, $type_name) {
     '#extra' => array_keys($extra),
     '#field_rows' => array(),
     '#group_rows' => array(),
-    '#order' => array(),
   );
 
   // Fields.
@@ -208,9 +230,9 @@ function content_field_overview_form(&$form_state, $type_name) {
   $weight = max($weights) + 1;
   $field_type_options = content_field_type_options();
   $widget_type_options = content_widget_type_options(NULL, TRUE);
-  array_unshift($field_type_options, t('- Select a field type -'));
-  array_unshift($widget_type_options, t('- Select a widget -'));
   if ($field_type_options && $widget_type_options) {
+    array_unshift($field_type_options, t('- Select a field type -'));
+    array_unshift($widget_type_options, t('- Select a widget -'));
     $name = '_add_new_field';
     $form[$name] = array(
       'label' => array(
@@ -227,7 +249,7 @@ function content_field_overview_form(&$form_state, $type_name) {
       'type' => array(
         '#type' => 'select',
         '#options' => $field_type_options,
-        '#description' => t('Type of data to store.'),
+        '#description' => theme('advanced_help_topic', 'content', 'fields') . t('Type of data to store.'),
       ),
       'widget_type' => array(
         '#type' => 'select',
@@ -281,7 +303,6 @@ function content_field_overview_form(&$form_state, $type_name) {
     $weight++;
     $name = '_add_new_group';
     $form[$name] = array(
-      'title' => array('#value' => theme('advanced_help_topic', 'content', 'add-new-group') . t('New group')),
       'label' => array(
         '#type' => 'textfield',
         '#size' => 15,
@@ -515,6 +536,8 @@ function content_field_overview_form_submit($form, &$form_state) {
  * and how the field labels should be rendered.
  */
 function content_display_overview_form(&$form_state, $type_name, $contexts_selector = 'basic') {
+  content_inactive_message($type_name);
+
   // Gather type information.
   $type = content_types($type_name);
   $field_types = _content_field_types();
@@ -533,12 +556,11 @@ function content_display_overview_form(&$form_state, $type_name, $contexts_selec
     '#fields' => array_keys($fields),
     '#groups' => array_keys($groups),
     '#contexts' => $contexts_selector,
-    '#order' => array(),
   );
 
   if (empty($fields)) {
-    drupal_set_message(t("There are no fields configured for this content type. You can add new fields on the !link page.", array(
-      '!link' => l(t('Manage fields'), 'admin/content/node-type/'. $type['url_str'] .'/fields'))), 'warning');
+    drupal_set_message(t('There are no fields configured for this content type. You can add new fields on the <a href="@link">Manage fields</a> page.', array(
+      '@link' => url('admin/content/node-type/'. $type['url_str'] .'/fields'))), 'warning');
     return $form;
   }
 
@@ -574,11 +596,18 @@ function content_display_overview_form(&$form_state, $type_name, $contexts_selec
       $options[$formatter_name] = $formatter_info['label'];
     }
     $options['hidden'] = t('<Hidden>');
+
     foreach ($contexts as $key => $value) {
       $form[$name][$key]['format'] = array(
         '#type' => 'select',
         '#options' => $options,
         '#default_value' => isset($defaults[$key]['format']) ? $defaults[$key]['format'] : 'default',
+      );
+      // exclude from $content
+      $form[$name][$key]['exclude'] = array(
+        '#type' => 'checkbox',
+        '#options' => array(0 => t('Include'), 1 => t('Exclude')),
+        '#default_value' => isset($defaults[$key]['exclude']) ? $defaults[$key]['exclude'] : 0,
       );
     }
   }
@@ -615,7 +644,13 @@ function content_display_overview_form(&$form_state, $type_name, $contexts_selec
       $form[$name][$key]['format'] = array(
         '#type' => 'select',
         '#options' => $options,
-        '#default_value' => isset($defaults[$key]) ? $defaults[$key] : 'fieldset',
+        '#default_value' => isset($defaults[$key]['format']) ? $defaults[$key]['format'] : 'fieldset',
+      );
+      // exclude in $content
+      $form[$name][$key]['exclude'] = array(
+        '#type' => 'checkbox',
+        '#options' => array(0 => t('Include'), 1 => t('Exclude')),
+        '#default_value' => isset($defaults[$key]['exclude']) ? $defaults[$key]['exclude'] : 0,
       );
     }
     foreach ($group['fields'] as $field_name => $field) {
@@ -641,7 +676,6 @@ function content_display_overview_form_submit($form, &$form_state) {
       $field['display_settings'] = $values + $field['display_settings'];
       content_field_instance_update($field);
     }
-    content_clear_type_cache();
   }
 
   drupal_set_message(t('Your settings have been saved.'));
@@ -1222,6 +1256,8 @@ function content_field_edit_form_validate($form, &$form_state) {
       $field['required'] = FALSE;
       $field_function = $field_type['module'] .'_field';
 
+      $errors_before = form_get_errors();
+
       // Widget now does its own validation, should be no need
       // to add anything for widget validation here.
       if (function_exists($field_function)) {
@@ -1229,7 +1265,8 @@ function content_field_edit_form_validate($form, &$form_state) {
       }
       // The field validation routine won't set an error on the right field,
       // so set it here.
-      if (form_get_errors()) {
+      $errors_after = form_get_errors();
+      if (count($errors_after) > count($errors_before)) {
         if (trim($form_values['default_value_php'])) {
           form_set_error('default_value_php', t("The PHP code for 'default value' returned @value, which is invalid.", array(
             '@value' => print_r($default_value, TRUE))));
@@ -1548,6 +1585,37 @@ function content_alter_db_cleanup() {
   // Or do we? This affects the schema and menu and may have unfortunate
   // delayed effects if we don't clear everything out at this point.
   content_clear_type_cache(TRUE);
+}
+
+/**
+ * Helper function to order fields and groups when theming (preprocessing)
+ * overview forms.
+ *
+ * The $form is passed by reference because we assign depths as parenting
+ * relationships are sorted out.
+ */
+function _content_overview_order(&$form, $field_rows, $group_rows) {
+  // Put weight and parenting values into a $dummy render structure
+  // and let drupal_render figure out the corresponding row order.
+  $dummy = array();
+  // Group rows: account for weight.
+  if (module_exists('fieldgroup')) {
+    foreach ($group_rows as $name) {
+      $dummy[$name] = array('#weight' => $form[$name]['weight']['#value'], '#value' => $name .' ');
+    }
+  }
+  // Field rows : account for weight and parenting.
+  foreach ($field_rows as $name) {
+    $dummy[$name] = array('#weight' => $form[$name]['weight']['#value'], '#value' => $name .' ');
+    if (module_exists('fieldgroup')) {
+      if ($parent = $form[$name]['parent']['#value']) {
+        $form[$name]['#depth'] = 1;
+        $dummy[$parent][$name] = $dummy[$name];
+        unset($dummy[$name]);
+      }
+    }
+  }
+  return $dummy ? explode(' ', trim(drupal_render($dummy))) : array();
 }
 
 /**
