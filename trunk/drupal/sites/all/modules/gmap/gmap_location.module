@@ -1,5 +1,5 @@
 <?php
-// $Id: gmap_location.module,v 1.41 2008/09/30 18:26:48 bdragon Exp $
+// $Id: gmap_location.module,v 1.47 2008/12/10 15:40:23 bdragon Exp $
 
 /**
  * @file
@@ -195,7 +195,7 @@ function gmap_location_user_page() {
 function gmap_location_user_point() {
   $uid = arg(3);
   if (is_numeric($uid) && $account = user_load(array('uid' => $uid))) {
-    echo theme('gmap_location_user_html', $account);
+    echo theme('gmap_location_infowindow_user', $account);
     exit();
   }
 }
@@ -218,8 +218,9 @@ function theme_gmap_location_user_page($header, $map, $footer) {
 /**
  * Draws a page with a google map with the node on it, or if no node is set all of the nodes on it.
  *
- * @param $nn
- * The node nid to draw on the map.  If this is not set, or is null then all of the nodes will be drawn.
+ * @param $nid
+ *   The node nid to draw on the map.
+ *   If this is not set, or is null then all of the nodes will be drawn.
  */
 function gmap_location_node_page($nid = NULL) {
 
@@ -234,7 +235,7 @@ function gmap_location_node_page($nid = NULL) {
   $map['rmtcallback'] = url('map/node/load');
   $map['markermode'] = $nodemap['markermode'];
 
-  if (!is_array($map['markers'])) {
+  if (!isset($map['markers']) || !is_array($map['markers'])) {
     $map['markers'] = array();
   }
 
@@ -522,7 +523,8 @@ function gmap_location_admin_settings() {
       '#title' => t('Marker for %type', array('%type' => $value->name)),
       '#default_value' => isset($defaults[$key]) ? $defaults[$key] : 'drupal',
     );
-    if (intval(variable_get('location_maxnum_'. $key, 0)) === 0) {
+    $settings = variable_get("location_settings_$key", FALSE);
+    if (!((isset($settings['multiple']['max']) && $settings['multiple']['max']) || variable_get("location_maxnum_$key", 0))) {
       $form['node']['gmap_node_markers'][$key]['#description'] = t('This content type is not currently Location enabled.');
     }
   }
@@ -535,8 +537,14 @@ function gmap_location_admin_settings() {
 function gmap_location_block($op = 'list', $delta = 0, $edit = array()) {
   switch ($op) {
     case 'list':
-      $blocks[0]['info'] = t('Location map');
-      $blocks[1]['info'] = t('Author map');
+      $blocks[0] = array(
+        'info' => t('Location map'),
+        'cache' => BLOCK_NO_CACHE, // As it injects JS.
+      );
+      $blocks[1] = array(
+        'info' => t('Author map'),
+        'cache' => BLOCK_NO_CACHE, // As it injects JS.
+      );
       return $blocks;
 
     case 'configure':
@@ -553,13 +561,14 @@ function gmap_location_block($op = 'list', $delta = 0, $edit = array()) {
 
         $ntypes = node_get_types();
         foreach ($ntypes as $key => $value) {
-          if (variable_get('location_maxnum_'. $key, 0)) {
-            $form['gmap_location_block_macro_'. $key] = array(
+          $settings = variable_get("location_settings_$key", FALSE);
+          if ((isset($settings['multiple']['max']) && $settings['multiple']['max']) || variable_get("location_maxnum_$key", 0)) {
+            $form["gmap_location_block_macro_$key"] = array(
               '#type' => 'textfield',
               '#title' => t('Map Macro for %type', array('%type' => $value->name)),
               '#size' => 60,
               '#maxlength' => 500,
-              '#default_value' => variable_get('gmap_location_block_macro_'. $key, ''),
+              '#default_value' => variable_get("gmap_location_block_macro_$key", ''),
             );
           }
         }
@@ -605,7 +614,8 @@ function gmap_location_block($op = 'list', $delta = 0, $edit = array()) {
         // Save node type specific macros.
         $ntypes = node_get_types();
         foreach ($ntypes as $key => $value) {
-          if (variable_get('location_maxnum_'. $key, 0)) {
+          $settings = variable_get("location_settings_$key", FALSE);
+          if ((isset($settings['multiple']['max']) && $settings['multiple']['max']) || variable_get("location_maxnum_$key", 0)) {
             $val = trim($edit["gmap_location_block_macro_$key"]);
             if (empty($val)) {
               variable_del("gmap_location_block_macro_$key");
@@ -762,7 +772,7 @@ function theme_gmap_location_infowindow_node($node) {
   // directory and add theme_hook_gmapnodelabel($node, $location) to it.
   // Be sure to enable your 'flexinode_#.module'.
   return '<div class="gmapnodelabel gmapnodelabel-'. form_clean_id($node->type) .
-    '">'. strtr(theme('node', $node, TRUE), "'\n\r", '"  ') .'</div>'; // make sure it all goes on one line.
+    '">'. strtr(node_view($node, TRUE, FALSE, FALSE), "'\n\r", '"  ') .'</div>'; // make sure it all goes on one line.
 }
 
 /**

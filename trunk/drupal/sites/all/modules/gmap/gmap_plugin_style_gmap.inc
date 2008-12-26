@@ -1,5 +1,5 @@
 <?php
-// $Id: gmap_plugin_style_gmap.inc,v 1.1 2008/09/17 22:47:10 bdragon Exp $
+// $Id: gmap_plugin_style_gmap.inc,v 1.3 2008/11/24 22:47:12 bdragon Exp $
 
 /**
  * @file
@@ -27,7 +27,7 @@ class gmap_plugin_style_gmap extends views_plugin_style {
     );
 
     $options['markers'] = array('default' => 'static');
-    $options['markertype'] = array('default' => 'default');
+    $options['markertype'] = array('default' => 'drupal');
 
     return $options;
   }
@@ -41,7 +41,9 @@ class gmap_plugin_style_gmap extends views_plugin_style {
     if ($this->options['markers'] == 'nodetype') {
       $this->view->query->add_field('node', 'type', 'gmap_node_type');
     }
-
+    else if ($this->options['markers'] == 'taxonomy') {
+      $this->view->query->add_field('gmap_taxonomy_node', 'marker', 'gmap_node_marker');
+    }
   }
 
   function render() {
@@ -50,7 +52,7 @@ class gmap_plugin_style_gmap extends views_plugin_style {
       return;
     }
 
-    $markername = 'drupal';
+    $markername = isset($this->options['markertype']) ? $this->options['markertype'] : 'drupal';
 
     $markertypes = variable_get('gmap_node_markers', array());
     if ($this->options['markers'] == 'nodetype') {
@@ -71,7 +73,14 @@ class gmap_plugin_style_gmap extends views_plugin_style {
         $lon = (float)$row->gmap_lon;
         if (!empty($lat) && !empty($lon)) {
           if ($this->options['markers'] == 'nodetype') {
-            $markername = isset($markertypes[$row->gmap_node_type]) ? $markertypes[$row->gmap_node_type] : 'drupal';
+            if (isset($markertypes[$row->gmap_node_type])) {
+              $markername = $markertypes[$row->gmap_node_type];
+            }
+          }
+          else if ($this->options['markers'] == 'taxonomy') {
+            if (!empty($row->gmap_node_marker)) {
+              $markername = $row->gmap_node_marker;
+            }
           }
           if (!isset($offsets[$markername])) {
             $offsets[$markername] = 0;
@@ -126,19 +135,21 @@ class gmap_plugin_style_gmap extends views_plugin_style {
       // @@@ Detect view type automatically?
       '#options' => array(
         'nodetype' => t('By content type (for node views)'),
-        //'taxonomy' => t('By term (for node views)'),
+        'taxonomy' => t('By term (for node views)'),
         'static' => t('Use single marker type'),
       ),
       '#default_value' => $this->options['markers'],
     );
 
-    if ($this->options['markers'] == 'static') {
-      $form['markertype'] = array(
-        '#type' => 'gmap_markerchooser',
-        '#title' => t('Marker type to use'),
-        '#default_value' => $this->options['markertype'],
-      );
+    // Hide the taxonomy handling if gmap_taxonomy.module isn't installed.
+    if (!module_exists('gmap_taxonomy')) {
+      unset($form['markers']['#options']['taxonomy']);
     }
 
+    $form['markertype'] = array(
+      '#type' => 'gmap_markerchooser',
+      '#title' => t('Marker / fallback marker to use'),
+      '#default_value' => $this->options['markertype'],
+    );
   }
 }

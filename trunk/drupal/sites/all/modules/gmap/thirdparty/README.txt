@@ -1,17 +1,9 @@
-/* $Id: README.txt,v 1.2 2008/07/15 16:30:31 bdragon Exp $ */
+/* $Id: README.txt,v 1.3 2008/10/29 17:39:41 bdragon Exp $ */
 
 Third party code.
 Place downloaded third party code in this folder if instructed to by GMap.
 
 (todo: document better)
-
-mousewheel.js
--------------
-JQuery Mouse Wheel plugin by Brandon Aaron
-Website: http://dev.jquery.com/browser/trunk/plugins/mousewheel
-Tested with SVN revision 1497.
-Tested version at: http://dev.jquery.com/export/1497/trunk/plugins/mousewheel/mousewheel.js
-
 
 clusterer2.js
 ------------
