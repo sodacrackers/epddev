@@ -6,9 +6,9 @@ core = 6.x
 dependencies[] = devel_generate
 dependencies[] = location
 
-; Information added by drupal.org packaging script on 2008-10-20
-version = "6.x-3.0-rc2"
+; Information added by drupal.org packaging script on 2008-12-12
+version = "6.x-3.0"
 core = "6.x"
 project = "location"
-datestamp = "1224522025"
+datestamp = "1229117725"
 
