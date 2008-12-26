@@ -1,5 +1,5 @@
 <?php
-// $Id: og.install,v 1.61 2008/08/28 12:19:51 weitzman Exp $
+// $Id: og.install,v 1.69 2008/10/09 15:06:31 weitzman Exp $
 
 /**
  * TODO: upgrade all update_14+ updates to d6
@@ -49,13 +49,6 @@ function og_schema() {
       ),
       'og_directory'       => array(
         'description'     => t('Should this group appear in the groups directory.'),
-        'type'            => 'int',
-        'size'            => 'tiny',
-        'not null'        => TRUE,
-        'default'         => 0,
-      ),
-      'og_notification'    => array(
-        'description'     => t('Not currently used.'),
         'type'            => 'int',
         'size'            => 'tiny',
         'not null'        => TRUE,
@@ -115,12 +108,6 @@ function og_schema() {
         'size'            => 'normal',
         'not null'        => TRUE,
       ),
-      'mail_type'       => array(
-        'description'     => t('Email notification preference.'),
-        'type'            => 'int',
-        'size'            => 'normal',
-        'not null'        => FALSE,
-      ),
       'created'         => array(
         'description'     => t('Time when this membership was created.'),
         'type'            => 'int',
@@ -137,25 +124,6 @@ function og_schema() {
       ),
     ),
     'primary key'       => array('nid', 'uid'),
-  );
-  $schema['og_uid_global']  = array(
-    'description'     => t('User preferences that are not group specific.'),
-    'fields'          => array(
-      'uid'             => array(
-        'description'     => t('The user. See {users}.uid.'),
-        'type'            => 'int',
-        'size'            => 'normal',
-        'not null'        => TRUE,
-      ),
-      'og_email'        => array(
-        'description'     => t('Notification preference for group posts (always, never, depends per group).'),
-        'type'            => 'int',
-        'size'            => 'normal',
-        'not null'        => TRUE,
-        'default'         => 2,
-      ),
-    ),
-    'primary key'     => array('uid'),
   );
   $schema['og_ancestry'] = array(
     'description'     => '',
@@ -193,7 +161,7 @@ function og_install() {
   drupal_install_schema('og');
 
   // enable standard og blocks. for custom profiles, block may not be included yet.
-  if (function_exists('block_rehash')) {
+  if (function_exists('_block_rehash')) {
     _block_rehash();
   }
   
@@ -285,9 +253,9 @@ function og_update_18() {
   return array();
 }
 
+// Formerly contained og_uid_global code which is no longer required.
 function og_update_19() {
-  og_populate_uid_global_table();
-  return array('Populated og_uid_global table');
+  return array();
 }
 
 function og_update_20() {
@@ -325,7 +293,7 @@ function og_update_5600() {
 function og_update_5700() {
   $ret = array();
   if (variable_get('og_enabled', FALSE) && !module_exists('og_access')) {
-    module_enable('og_access');
+    drupal_install_modules('og_access');
   }
   // variable_del('og_enabled'); is harmless to leave around, and will help if someone reruns the update.
   
@@ -359,6 +327,44 @@ function og_update_5701() {
  return $ret;
 }
 
+/**
+ * Notifications upgrade: Set flag to indicate that this is an upgraded 
+ * installation.
+ */ 
+function og_update_5703() {
+  // Remove mail / no mail options from OG group types and move preferences to
+  // og_notifications.
+  $types = og_get_types('group_post');
+  $mail_types = array();
+  foreach ($types as $type) {
+    $variable = 'og_content_type_usage_'. $type;
+    $usage = variable_get($variable, '');
+    switch ($usage) {
+      case 'group_post_standard_mail':
+        $mail_types[$type] = $type;
+      case 'group_post_standard_nomail':
+        variable_set($variable, 'group_post_standard');
+        break;
+      case 'group_post_wiki_mail':
+        $mail_types[$type] = $type;
+      case 'group_post_wiki_nomail':
+        variable_set($variable, 'group_post_wiki');
+        break;
+    }
+  }
+  // Set variable for og_notifications. If it is never enabled, this variable
+  // is also deleted in og_uninstall.
+  variable_set('og_notifications_content_types', $mail_types);
+
+  // Vestigial variable.
+  variable_del('og_omitted_email_node_types');
+
+  // Set update flag for og_notifications.
+  variable_set('og_notifications_update_required', 1);
+
+  return array();
+}
+
 function og_update_6000() {
   $ret = array();
   // Fix how we append the custom request text from a group join request.
@@ -372,7 +378,7 @@ function og_update_6000() {
 // Update to support views modularization while retaining backward compatibility.
 function og_update_6001() {
   $ret = array();
-  module_enable(array('og_views'));
+  drupal_install_modules(array('og_views'));
   //enable the og_views block instead of the plain og one
   db_query("UPDATE {blocks} SET module = 'og_views', delta = '1' WHERE module = 'og' AND delta = '5'");
   return $ret;
@@ -389,7 +395,6 @@ function og_update_6002() {
   db_change_field($ret, 'og', 'theme', 'og_theme', $fields['og_theme']);
   db_change_field($ret, 'og', 'directory', 'og_directory', $fields['og_directory']);
   db_change_field($ret, 'og', 'description', 'og_description', $fields['og_description']);
-  db_change_field($ret, 'og', 'notification', 'og_notification', $fields['og_notification']);
   db_change_field($ret, 'og', 'language', 'og_language', $fields['og_language']);
   db_change_field($ret, 'og', 'private', 'og_private', $fields['og_private']);
   return $ret;
@@ -397,26 +402,20 @@ function og_update_6002() {
 
 // end updates //
 
-function og_enable() {
-  og_populate_uid_global_table();
-}
-
-// Need to populate og_uid_global for existing users. Uses a subquery.
-// This is called from update 13 & 19 & og_enable(). 
-function og_populate_uid_global_table() {
-  $subquery = 'SELECT u.uid, %d FROM {users} u LEFT JOIN {og_uid_global} oug ON u.uid=oug.uid WHERE u.uid > 0 AND oug.og_email IS NULL';
-  $sql = "INSERT INTO {og_uid_global} (uid, og_email) $subquery";
-  db_query($sql, OG_NOTIFICATION_SELECTIVE);
-}
-
 function og_uninstall() {
   drupal_uninstall_schema('og');
+
+  // In case og_notifications has never been enabled, the vestigial 
+  // og_uid_global table will still be around. 
+  if (variable_get('og_notifications_update_required', FALSE)) {
+    db_query('DROP TABLE {og_uid_global}');
+  }
 
   // Delete variables
   $variables = array(
     'og_help', 'og_block_cnt_2', 'og_block_cnt_3',
     'og_audience_checkboxes', 'og_omitted', 'og_content_type_usage',
-    'og_audience_required', 'og_omitted_email_node_types',
+    'og_audience_required',
     'og_visibility_directory', 'og_visibility_registration',
     'og_home_page_view', 'og_email_max', 'og_node_types',
     'og_admin_email_body', 'og_email_notification_pattern',
@@ -425,9 +424,40 @@ function og_uninstall() {
     'og_invite_user_body', 'og_invite_user_subject',
     'og_new_admin_body', 'og_new_admin_subject',
     'og_new_node_body', 'og_new_node_subject',
-    'og_notification', 'og_request_user_body', 'og_request_user_subject',
+    'og_request_user_body', 'og_request_user_subject',
+    'og_notifications_update_required', 'og_notifications_content_types'
   );
   foreach ($variables as $variable) {
     variable_del($variable);
   }
+}
+
+function og_requirements($phase) {
+  // Need og_readme() function.
+  drupal_load('module', 'og');
+  
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+  if ($phase == 'runtime') {
+    $og_types = og_get_types('group');
+    $all_types = array_keys(node_get_types('types'));
+    if (!count(array_intersect($og_types, $all_types))) {
+      $requirements['og_group_types']  = array(
+        'title' => $t('Organic groups group type'),
+        'value' => $t('You have no node types which are acting as groups. See the notes section of the !readme_file and the content types fieldset at top of <a href="!settings">OG settings</a>.', array('!readme_file' => og_readme(), '!settings' => url('admin/og/og'))),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+
+    if (!module_exists('og_access')) {
+      $requirements['og_access'] = array(
+        'title' => $t('Organic groups access control'),
+        'value' => $t('Organic groups access control module is disabled. See the <a href="@modules">modules page</a>.', array('@modules' => url('admin/build/modules'))),
+        'severity' => REQUIREMENT_INFO
+      );
+    }
+  }
+  
+  return $requirements;
 }
