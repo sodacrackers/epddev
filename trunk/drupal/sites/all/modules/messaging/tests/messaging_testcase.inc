@@ -1,11 +1,11 @@
 <?php
-// $Id: messaging_testcase.inc,v 1.1.2.1.2.1 2008/04/12 18:40:14 jareyero Exp $ 
+// $Id: messaging_testcase.inc,v 1.1.2.1.2.2 2008/10/08 11:05:27 jareyero Exp $ 
 /*
  * Base class for Messaging testing
  *  * Created on Mar 18, 2008
  */
 
-class MessagingTestCase extends DrupalTestCase {
+class MessagingTestCase extends DrupalWebTestCase {
   var $_messaging_status;
   // Store current status for clean up
   function messagingStartTest() {

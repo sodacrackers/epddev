@@ -1,10 +1,17 @@
 <?php
-
+// $Id: messaging_phpmailer.install,v 1.1.2.1.2.1 2008/11/08 02:05:53 jareyero Exp $
 /**
  * Implementation of hook_install()
  */
 function messaging_phpmailer_install() {
   drupal_set_message('Messaging PHPMailer sucessfully installed!');
+}
+
+/**
+ * Implementation of hook_disable()
+ */
+function messaging_phpmailer_disable() {
+  messaging_method_disable('phpmailer');
 }
 
 /**
