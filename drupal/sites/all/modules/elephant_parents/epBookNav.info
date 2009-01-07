@@ -1,0 +1,5 @@
+; $Id: epQuestions.info, 2008/11/18 nickNickoli $
+name = "epBookNav"
+description = "EP book navigation block for pages"
+core=6.x
+package = "elephant_parents"
