@@ -1,8 +1,0 @@
-[Sat Oct  4 21:57:00 2008] [error] [client 72.192.197.56] File does not exist: /htdocs/dev/
-[Sat Oct  4 21:58:13 2008] [error] [client 72.192.197.56] File does not exist: /htdocs/dev/
-[Sat Oct  4 22:04:26 2008] [error] [client 204.11.245.151] script not found or unable to stat: /htdocs/_/cron.php
-[Sun Oct  5 00:00:07 2008] [error] [client 204.11.245.151] script not found or unable to stat: /htdocs/_/cron.php
-[Sun Oct  5 11:11:53 2008] [error] [client 67.171.23.215] File does not exist: /htdocs/_/favicon.ico
-[Sun Oct  5 11:11:56 2008] [error] [client 67.171.23.215] File does not exist: /htdocs/_/favicon.ico
-[Sun Oct  5 11:12:48 2008] [error] [client 67.171.23.215] File does not exist: /htdocs/dev/favicon.ico
-[Sun Oct  5 11:12:51 2008] [error] [client 67.171.23.215] File does not exist: /htdocs/dev/favicon.ico
