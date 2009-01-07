@@ -1,0 +1,82 @@
+<?php
+print microtime();
+/*
+ * 2008-01-05
+ * http://drupal.org/node/44648 http://drupal.org/node/209336
+ * $Id: block_example.module,v 1.9 2007/07/06 18:16:15 drewish Exp $
+ */
+
+function epBookNav_block($op = 'list', $delta = 0, $edit = array())
+{
+	$blocks = array();
+	if($op == 'list') {
+		$blocks[0] = array('info' => t('epBookNav_block'),
+			'status' => TRUE, 
+			'weight' => 0, 
+			'visibility' => 1, 
+			'region' => 'right',
+			'pages' => 'node/*',
+			'cache' => BLOCK_NO_CACHE,
+		);
+	}
+	elseif($op == 'view') {
+		$blocks['subject'] = t('Browse the Sections');
+		$blocks['content'] = epBookNav_content();
+		drupal_add_js(path_to_theme().'/includes/jquery-accordion/jquery.accordion.js');
+		drupal_add_js(epBookNav_content_js(), 'inline', 'footer');
+	}
+	return $blocks;
+}
+
+/**
+ * A block content function
+ */
+function epBookNav_content()
+{
+	/*if($node = menu_get_object()) {
+		$current_bid = empty($node->book['bid']) ? 0 : $node->book['bid'];
+	}*/
+	$book_menus = array();
+	foreach(book_get_books() as $book_id => $book) 
+	{
+		$node = node_load($book['nid']);
+		$book_menus[$book_id] = menu_tree_output(menu_tree_all_data($node->book['menu_name']));
+	}
+	return theme('book_all_books_block', $book_menus);
+}
+
+function epBookNav_content_js()
+{
+	$js = <<<EOT
+/*
+jQuery('').accordion({ 
+	active: false, 
+	//    header: '.head', 
+	navigation: true, 
+	event: 'mouseover', 
+	fillSpace: true, 
+	animated: 'easeslide',
+	selectedClass: 'active'
+});
+
+$('#test ul ul').hide();
+$('#test ul').hover(
+    function () {
+$(this).css('background', 'red');
+$(this).find('ul').show();
+    }, 
+    function () {
+$(this).css('background', 'none');
+$(this).find('ul').hide();
+    });
+
+
+
+
+
+*/
+
+EOT;
+	return $js;
+}
+
