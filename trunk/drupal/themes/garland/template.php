@@ -10,10 +10,33 @@ drupal_add_js(path_to_theme().'/includes/elephant-parents.js');
 function phptemplate_preprocess(&$variables, $hook) 
 {
 	global $user;
-	// give questions a friendly title and preproc comments below
-	if(($hook == 'node' || $hook == 'page') && $variables['node']->type == 'question') {
+	if($hook == 'page' && strstr(drupal_set_header(), '404 Not Found')) 
+	{ // set a more useful error message and enable blocks
+		drupal_set_message('The page you requested can not be found. Please recheck the address (<tt>url</tt>) and try again.');
+		$variables['show_blocks'] = $variables['show_blocks'] ? $variables['show_blocks'] : true; // !! not getting a hook on this
+		$html = '<h3>Sorry!</h3> <p>We were unable to find the page you were looking for. Please try browsing '. l('popular content', 'popular') .' or '. l('searching', 'search') .' for a specific page with the form below.</p>';
+		$html .= drupal_get_form('search_form'); 
+		$html .= '<p>&nbsp;</p><p>For other help, please '. l('contact Elephant Parents', 'contact') .'.</p>';
+		$variables['content'] = $html;
+	}
+	
+	if($hook == 'page' && strstr(drupal_set_header(), '403 Forbidden')) 
+	{ // provide access information
+		drupal_set_message('Access denied for the resource or path given.');
+		$html = '<h3>Sorry!</h3> <p>Access is not allowed to the page your requested. Some sections of our site can only be visited by administrators, trusted columnists or community professionals.</p>';
+		$html .= '<p>To upgrade your account or request special permissions, please fill out our '. l('request form', 'contact/get-professional-status') .'.</p>';
+		$html .= empty($user->uid) ? '<p>Existing users may sign-in below or '. l('register', 'user/register') .' for an account now.' : ''; 
+		$html .= empty($user->uid) ? drupal_get_form('user_login') : '';
+		$html .= '<p>&nbsp;</p><p>For other help, please '. l('contact Elephant Parents', 'contact') .'.</p>';
+		$variables['content'] = $html;
+	}
+
+	if(($hook == 'node' || $hook == 'page') && $variables['node']->type == 'question') 
+	{ // give questions a friendly title and preproc comments below
 		$variables['title'] = 'Q/A: '. $variables['title'];
 	}
+	
+	// collect comments for themeing, unset them in the preprocess_node // http://drupal.org/node/161139 //http://drupal.org/node/122240#comment-272809
 }
 
 /**
@@ -32,7 +55,6 @@ function phptemplate_body_class($left, $right) {
 			$class = 'sidebar-right';
 		}
 	}
-
 	if (isset($class)) {
 		print ' class="'. $class .'"';
 	}
@@ -68,13 +90,8 @@ function phptemplate_preprocess_page(&$vars) {
 	if (module_exists('color')) {
 		_color_page_alter($vars);
 	}
-	// collect comments for themeing, unset them in the preprocess_node
-	// http://drupal.org/node/161139 //http://drupal.org/node/122240#comment-272809
 }
 
-function phptemplate_preprocess_node(&$vars) {
-	// $vars['node']->comment = 0;
-}
 
 function phptemplate_comment_submitted($comment) {
 	return t('!datetime — !username',
@@ -100,7 +117,7 @@ function phptemplate_comment_wrapper($content, $node) {
 		return '<div id="comments">'. $content .'</div>';
 	}
 	if($node->type == 'question') {
-		return '<div id="comments"><h2 class="comments">'. t('Question Comments & Answers') .'</h2>'. $content .'</div>';	
+		return '<div id="comments"><h1 class="comments">'. t('Question Comments & Answers') .'</h1>'. $content .'</div>';	
 	}
 	return '<div id="comments"><h2 class="comments">'. t('Comments') .'</h2>'. $content .'</div>';
 }

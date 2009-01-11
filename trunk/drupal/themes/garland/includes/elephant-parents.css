@@ -4,11 +4,14 @@
  
 
 	/* theme the user-location form */ 
-.view-ep-user-location-table2 .views-exposed-widget {
+view-ep-professionals-maplist .views-exposed-widget {
 	}
-.view-ep-prof-map #edit-distance-postal-code, 
-.view-ep-prof-map #edit-distance-search-distance, 
-.view-ep-prof-map #edit-distance-search-units
-{
+.view-ep-professionals-maplist #edit-distance-postal-code, 
+.view-ep-professionals-maplist #edit-distance-search-distance, 
+.view-ep-professionals-maplist #edit-distance-search-units {
 	width: 100px;
+	}
+#edit-distance-postal-code-wrapper label , #edit-distance-search-distance-wrapper label {
+	/*float: left;
+	padding-right: .5em;*/
 	}
