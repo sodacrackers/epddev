@@ -1,6 +1,7 @@
 <?php 
+
 $view = new view;
-$view->name = 'ep_prof_map';
+$view->name = 'ep_professionals_maplist';
 $view->description = 'EP Professionals Listing';
 $view->tag = 'ep';
 $view->view_php = '';
@@ -201,7 +202,7 @@ $handler = $view->new_display('block', 'Block', 'block_1');
 $handler->override_option('style_plugin', 'gmap');
 $handler->override_option('style_options', array(
   'grouping' => '',
-  'macro' => '[gmap |id=usermap|center=47.680737,-122.370766|zoom=3|width=100%|height=300px]',
+  'macro' => '[gmap |id=usermap|center=47.680737,-122.370766|zoom=5|width=100%|height=300px]',
   'datasource' => 'location',
   'markers' => 'static',
   'markertype' => 'small bred',
