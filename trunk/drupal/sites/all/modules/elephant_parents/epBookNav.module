@@ -1,5 +1,4 @@
 <?php
-print microtime();
 /*
  * 2008-01-05
  * http://drupal.org/node/44648 http://drupal.org/node/209336
@@ -42,39 +41,31 @@ function epBookNav_content()
 		$node = node_load($book['nid']);
 		$book_menus[$book_id] = menu_tree_output(menu_tree_all_data($node->book['menu_name']));
 	}
-	return theme('book_all_books_block', $book_menus);
+	$css = '<style type="text/css">.epBookNav_content ul li.collapsed { background-image: url("/sites/all/themes/elephantparents/images/ep-menu-collapsed.gif") } .epBookNav_content ul li.expanded { background-image: url("/sites/all/themes/elephantparents/images/ep-menu-expanded.gif") }</style>';
+	return '<div class="epBookNav_content">'. theme('book_all_books_block', $book_menus) . $css .'</div>';
 }
 
 function epBookNav_content_js()
 {
 	$js = <<<EOT
-/*
-jQuery('').accordion({ 
-	active: false, 
-	//    header: '.head', 
-	navigation: true, 
-	event: 'mouseover', 
-	fillSpace: true, 
-	animated: 'easeslide',
-	selectedClass: 'active'
+
+$('.epBookNav_content a.active').parents('li').addClass('active');
+$('.epBookNav_content li').each(function() 
+{ 
+	target = $(this).find('ul:first');
+	if(target.length < 1) return;
+	$(target).not('.active').hide().parent('li').removeClass('expanded').addClass('collapsed');
+	link = $(this).prepend('<span></span>').find('span').attr('style', 'position:absolute;left:3em;width:2em;height:1em;');	
+	$(link).toggle(
+		function() {
+			$(this).addClass('expanded').removeClass('collapsed');
+			$(target).slideDown('slow');
+		}, 
+		function() {
+			$(this).addClass('collapsed').removeClass('expanded');
+			$(target).fadeOut(500);
+	});
 });
-
-$('#test ul ul').hide();
-$('#test ul').hover(
-    function () {
-$(this).css('background', 'red');
-$(this).find('ul').show();
-    }, 
-    function () {
-$(this).css('background', 'none');
-$(this).find('ul').hide();
-    });
-
-
-
-
-
-*/
 
 EOT;
 	return $js;
