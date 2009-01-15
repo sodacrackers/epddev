@@ -4,44 +4,37 @@ $professional_comment = false;
 $author = user_load($comment->uid); //wasn't getting a hook on $comment->user_roles so looking up user
 foreach(array('auth professionals', 'content manager', 'site administrator') as $role)
 {
-	if(in_array($role, $author->roles)) {
+	if($author->roles && in_array($role, $author->roles)) {
 		$professional_comment = true;
 	}
 }
 ?>
+
 <div class="comment<?php print ($comment->new) ? ' comment-new' : ''; print ' '. $status; print ' '. $zebra; ?>">
-  <?php if($professional_comment): ?>
-    <div class="ep-auth-professional"><img src="/sites/all/themes/elephantparents/images/thumbs-up.png" /> Submitted by an Authorized Professional</div>
-  <?php endif; ?>
-  <div class="clear-block">
-  <?php if ($submitted): ?>
-    <span class="submitted"><?php print $submitted; ?></span>
-  <?php endif; ?>
-
-  <?php if ($comment->new) : ?>
-    <span class="new"><?php print drupal_ucfirst($new) ?></span>
-  <?php endif; ?>
-
-  <?php print $picture ?>
-
-    <h3><?php print $title ?></h3>
-
-    <div class="content">
-      <?php print $content ?>
-      <?php if ($signature): ?>
-      <div class="clear-block">
-        <div>—</div>
-        <?php print $signature ?>
-      </div>
-      <?php endif; ?>
-    </div>
-  </div>
-
-  <?php if ($links): ?>
-    <div class="links"><?php print $links ?></div>
-  <?php endif; ?>
+	<?php if($professional_comment): ?>
+	<div class="ep-auth-professional"><img src="/sites/all/themes/elephantparents/images/thumbs-up.png" /> Submitted by an Authorized Professional</div>
+	<?php endif; ?>
+	<div class="clear-block">
+		<?php if ($submitted): ?>
+		<span class="submitted"><?php print $submitted; ?></span>
+		<?php endif; ?>
+		<?php if ($comment->new) : ?>
+		<span class="new"><?php print drupal_ucfirst($new) ?></span>
+		<?php endif; ?>
+		<?php print $picture ?>
+		<h3><?php print $title ?></h3>
+		<div class="content"> <?php print $content ?>
+			<?php if ($signature): ?>
+			<div class="clear-block">
+				<div>—</div>
+				<?php print $signature ?> </div>
+			<?php endif; ?>
+		</div>
+	</div>
+	<?php if ($links): ?>
+	<div class="links"><?php print $links ?></div>
+	<?php endif; ?>
 </div>
-
 <?
 /*
 stdClass Object
@@ -87,9 +80,9 @@ stdClass Object
     [pid] => 0
     [nid] => 14
     [subject] => Comment Three by Auth user.
-    [comment] => <p>Comment Three by Auth user. string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string.</p>
-
-    [format] => 1
+    [comment] =>
+<p>Comment Three by Auth user. string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string string.</p>
+[format] => 1
     [timestamp] => 1226799442
     [name] => EP Auth Prof
     [mail] => 

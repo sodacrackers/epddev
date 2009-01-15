@@ -3,7 +3,6 @@
 // Dup of Garland 11/2008 with Drupal 6.4
 
 drupal_add_css(path_to_theme().'/includes/elephant-parents.css');
-drupal_add_js(path_to_theme().'/includes/jquery-accordion/jquery.accordion.js'); //jquery.accordion.min.js');
 drupal_add_js(path_to_theme().'/includes/elephant-parents.js');
 
 
@@ -15,8 +14,7 @@ function phptemplate_preprocess(&$variables, $hook)
 		drupal_set_message('The page you requested can not be found. Please recheck the address (<tt>url</tt>) and try again.');
 		$variables['show_blocks'] = $variables['show_blocks'] ? $variables['show_blocks'] : true; // !! not getting a hook on this
 		$html = '<h3>Sorry!</h3> <p>We were unable to find the page you were looking for. Please try browsing '. l('popular content', 'popular') .' or '. l('searching', 'search') .' for a specific page with the form below.</p>';
-		$html .= drupal_get_form('search_form'); 
-		$html .= '<p>&nbsp;</p><p>For other help, please '. l('contact Elephant Parents', 'contact') .'.</p>';
+		$html .= drupal_get_form('search_form') .'<p>&nbsp;</p><p>For other help, please '. l('contact Elephant Parents', 'contact') .'.</p>';
 		$variables['content'] = $html;
 	}
 	
@@ -31,12 +29,21 @@ function phptemplate_preprocess(&$variables, $hook)
 		$variables['content'] = $html;
 	}
 
-	if(($hook == 'node' || $hook == 'page') && $variables['node']->type == 'question') 
-	{ // give questions a friendly title and preproc comments below
+	if(isset($variables['node']) && $variables['node']->type == 'question') 
+	{ // fill comment variable for our template. hide comments for some users.  http://drupal.org/node/122240#comment-272809
 		$variables['title'] = 'Q/A: '. $variables['title'];
+		if($hook == 'node') {
+			if(!$user->uid) {
+				$variables['node']->comment = 0;
+				$html = '<div class="ep-comments-notice"><p>Some sections of our website require special permissions. To view question answers or participate in the discussion, you will have to '. l('register for an account', 'user/register') .'</p><p><em>This question has '. (int)$variables['node']->comment_count .' answers or replys posted online.</em><p></div>';
+				$variables['content'] = $variables['content'] . $html;
+			} 
+			else {
+				$variables['comments'] = comment_render($variables['node']); 
+				$variables['comment_form'] = drupal_get_form('comment_form', array('nid' => $variables['node']->nid));
+			}
+		}
 	}
-	
-	// collect comments for themeing, unset them in the preprocess_node // http://drupal.org/node/161139 //http://drupal.org/node/122240#comment-272809
 }
 
 /**
@@ -113,6 +120,7 @@ function phptemplate_node_submitted($node) {
  * Allow themable wrapping of all comments.
  */
 function phptemplate_comment_wrapper($content, $node) {
+	global $user;
 	if (!$content || $node->type == 'forum') {
 		return '<div id="comments">'. $content .'</div>';
 	}
@@ -132,7 +140,6 @@ function phptemplate_box($title = '', $content = '', $region = 'main') {
 		}
 		$title = 'Submit a New Answer or Comment';
 	}
-
 	return '<h2 class="title">'. $title .'</h2><div>'. $content .'</div>';
 }
 
@@ -163,3 +170,14 @@ function phptemplate_menu_item($link, $has_children, $menu = '', $in_active_trai
 	return '<li class="'. $class .'">'. $link . $menu ."</li>\n";
 }
 
+function phptemplate_form_alter(&$form, $form_state, $form_id) {
+drupal_set_message(t('I should not see this'), 'error');
+	$form['#submit'] = array('ep_new_user_notify') + $form['#submit'];
+	return $form;
+}
+
+function ep_new_user_notify($form) {
+drupal_set_message(t('I should not see this 3'), 'error');
+	exit(var_dump(array('templ', $form, &$form_state)));
+	$mail = drupal_mail('user', $op, $account->mail, $language, $params);
+}

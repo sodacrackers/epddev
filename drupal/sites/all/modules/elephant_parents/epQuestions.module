@@ -13,11 +13,6 @@ function epQuestions_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
 			$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : null; // first \s after 50
 			$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
 		}
-		if($op == 'view' && $a4 == true)
-		{
-			$node->content['#title'] = 'Question: ' . $node->title;
-			$node->title = 'Question: ' . $node->title;
-		}
 	}
 	
 }
@@ -26,11 +21,14 @@ function epQuestions_form_alter(&$form, $form_state, $form_id)
 {
 	global $user;
 	// hide the title field for non-admins
-	if($form_id == 'question_node_form' && !user_access('administer comments')) 
-	{ 
+	if($form_id == 'question_node_form' && !user_access('administer comments')) { 
 		$form['title']['#type'] = 'hidden';
 		$form['title']['#default_value'] = 'Question';
 		$form['body_field']['body']['#title'] = 'Your Question';
+	}
+	if($form_id == 'user_register') {
+		drupal_set_message(t('I should not see this 2'), 'error');
+		$form['#submit'][] = 'epQuestions_new_user_notify';
 	}
 }
 
@@ -46,3 +44,23 @@ function null_epQuestions_preprocess_comment_wrapper(&$variables) {
 function null_epQestions_comment_block() {
 }
 
+function epQestions_user($op, &$edit, &$account, $category = NULL) 
+{
+drupal_set_message('12');
+}
+
+function epQestions_user_register_submit() {
+print 'q';
+exit(var_dump(func_get_args()));
+}
+
+function epQestions_form_submit() {
+print 'f';
+exit(var_dump(func_get_args()));
+}
+
+
+function epQuestions_new_user_notify() {
+print 'w';
+exit(var_dump(func_get_args()));
+}

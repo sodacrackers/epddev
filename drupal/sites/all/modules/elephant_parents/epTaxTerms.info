@@ -1,0 +1,5 @@
+; $Id: epQuestions.info, 2008/11/18 nickNickoli $
+name = "epTaxTerms"
+description = "EP taxonomy helper block"
+core=6.x
+package = "elephant_parents"

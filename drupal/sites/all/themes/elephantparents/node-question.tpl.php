@@ -20,4 +20,10 @@
 		<div class="links"><?php print $links; ?></div>
 		<?php endif; ?>
 	</div>
+	<div class="clear-block">
+		<? if($node_comments): print $node_comments; endif; ?>
+		<? if($node_comment_form): print $node_comment_form; endif; ?>
+	</div>
 </div>
+
+

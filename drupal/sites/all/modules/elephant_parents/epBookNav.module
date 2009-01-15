@@ -21,7 +21,6 @@ function epBookNav_block($op = 'list', $delta = 0, $edit = array())
 	elseif($op == 'view') {
 		$blocks['subject'] = t('Browse the Sections');
 		$blocks['content'] = epBookNav_content();
-		drupal_add_js(path_to_theme().'/includes/jquery-accordion/jquery.accordion.js');
 		drupal_add_js(epBookNav_content_js(), 'inline', 'footer');
 	}
 	return $blocks;
@@ -49,21 +48,21 @@ function epBookNav_content_js()
 {
 	$js = <<<EOT
 
-$('.epBookNav_content a.active').parents('li').addClass('active');
+$('.epBookNav_content a.active').parents(['li', 'ul']).addClass('active');
 $('.epBookNav_content li').each(function() 
 { 
-	target = $(this).find('ul:first');
+	var target = $(this).find('ul:first');
 	if(target.length < 1) return;
 	$(target).not('.active').hide().parent('li').removeClass('expanded').addClass('collapsed');
-	link = $(this).prepend('<span></span>').find('span').attr('style', 'position:absolute;left:3em;width:2em;height:1em;');	
+	var link = $(this).prepend('<span style="float:left;margin-left:-3em;width:3em;height:3em"></span>').find('span');
 	$(link).toggle(
 		function() {
-			$(this).addClass('expanded').removeClass('collapsed');
+			$(this).parent('li').addClass('expanded').removeClass('collapsed');
 			$(target).slideDown('slow');
 		}, 
 		function() {
-			$(this).addClass('collapsed').removeClass('expanded');
-			$(target).fadeOut(500);
+			$(this).parent('li').addClass('collapsed').removeClass('expanded');
+			$(target).slideUp('fast');
 	});
 });
 

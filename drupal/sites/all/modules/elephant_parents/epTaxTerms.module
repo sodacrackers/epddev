@@ -1,0 +1,72 @@
+<?php
+/*
+ * 2008-01-05
+ * http://drupal.org/node/44648 http://drupal.org/node/209336
+ * $Id: block_example.module,v 1.9 2007/07/06 18:16:15 drewish Exp $
+ */
+
+function epTaxTerms_block($op = 'list', $delta = 0, $edit = array())
+{
+	$blocks = array();
+	if($op == 'list') {
+		$blocks[0] = array('info' => t('epTaxTerms_block'),
+			'status' => TRUE, 
+			'weight' => 0, 
+			'visibility' => 1, 
+			'region' => 'right',
+			'pages' => 'node/*',
+			'cache' => BLOCK_NO_CACHE,
+		);
+	}
+	elseif($op == 'view') {
+		$blocks['subject'] = t('More About the Tags');
+		$blocks['content'] = epTaxTerms_content();
+		drupal_add_js(epTaxTerms_content_js(), 'inline', 'footer');
+	}
+	return $blocks;
+}
+
+/**
+ * A block content function
+ */
+function epTaxTerms_content()
+{
+	/*if($node = menu_get_object()) {
+		$current_bid = empty($node->book['bid']) ? 0 : $node->book['bid'];
+	}*/
+	$book_menus = array();
+	foreach(book_get_books() as $book_id => $book) 
+	{
+		$node = node_load($book['nid']);
+		$book_menus[$book_id] = menu_tree_output(menu_tree_all_data($node->book['menu_name']));
+	}
+	$css = '<style type="text/css">.epTaxTerms_content ul li.collapsed { background-image: url("/sites/all/themes/elephantparents/images/ep-menu-collapsed.gif") } .epTaxTerms_content ul li.expanded { background-image: url("/sites/all/themes/elephantparents/images/ep-menu-expanded.gif") }</style>';
+	return '<div class="epTaxTerms_content">'. theme('book_all_books_block', $book_menus) . $css .'</div>';
+}
+
+function epTaxTerms_content_js()
+{
+	$js = <<<EOT
+
+$('.epTaxTerms_content a.active').parents(['li', 'ul']).addClass('active');
+$('.epTaxTerms_content li').each(function() 
+{ 
+	var target = $(this).find('ul:first');
+	if(target.length < 1) return;
+	$(target).not('.active').hide().parent('li').removeClass('expanded').addClass('collapsed');
+	var link = $(this).prepend('<span style="float:left;margin-left:-3em;width:3em;height:3em"></span>').find('span');
+	$(link).toggle(
+		function() {
+			$(this).parent('li').addClass('expanded').removeClass('collapsed');
+			$(target).slideDown('slow');
+		}, 
+		function() {
+			$(this).parent('li').addClass('collapsed').removeClass('expanded');
+			$(target).slideUp('fast');
+	});
+});
+
+EOT;
+	return $js;
+}
+
