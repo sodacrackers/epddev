@@ -68,6 +68,8 @@
 						<?php if ($tabs2): print '<ul class="tabs secondary">'. $tabs2 .'</ul>'; endif; ?>
 						<?php if ($show_messages && $messages): print $messages; endif; ?>
 						<?php print $help; ?>
+<?php if($vocab_description): ?><div id="vocab-description"><?php print $vocab_description; ?></div><?php endif; ?>
+<?php if($term_description): ?><div id="term-description"><?php print $term_description; ?></div><?php endif; ?>
 						<div class="clear-block"> <?php print $content ?> </div>
 						<?php print $feed_icons ?>
 						<div id="footer"><?php print $footer_message . $footer ?></div>

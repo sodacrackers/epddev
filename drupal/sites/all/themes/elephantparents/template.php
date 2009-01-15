@@ -44,6 +44,22 @@ function phptemplate_preprocess(&$variables, $hook)
 			}
 		}
 	}
+	
+	if($hook == 'page' && arg(0) == 'taxonomy') 
+	{ // http://drupal.org/node/191959
+		$variables['title'] = 'Articles Related to: '. $variables['title'];
+		$variables['term_description'] = $vars['vocab_description'] = '';  //create template vars
+		$a2 = arg(2);  
+		if(is_numeric($a2)) {
+			$r = db_query(db_rewrite_sql("SELECT vid, description FROM {term_data} td WHERE td.tid = %d"), $a2);
+			$this_term = db_fetch_object($r);
+			$variables['term_description'] = $this_term->description;
+			
+			$r = db_query(db_rewrite_sql("SELECT description FROM {vocabulary} WHERE vid = %d LIMIT 1"), $this_term->vid);
+			$this_vocab = db_fetch_object($r);
+			$variables['vocab_description'] = $this_vocab->description;
+		}
+	}
 }
 
 /**
@@ -181,3 +197,81 @@ drupal_set_message(t('I should not see this 3'), 'error');
 	exit(var_dump(array('templ', $form, &$form_state)));
 	$mail = drupal_mail('user', $op, $account->mail, $language, $params);
 }
+
+
+
+
+
+
+
+// quick hack for http://drupal.org/node/261902
+if (!function_exists('array_diff_key')) {
+  function array_diff_key() {
+    $arrs = func_get_args();
+    $result = array_shift($arrs);
+    foreach ($arrs as $array) {
+      foreach ($result as $key => $v) {
+        if (array_key_exists($key, $array)) {
+          unset($result[$key]);
+        }
+      }
+    }
+    return $result;
+   }
+}
+
+
+// quick hack for block with recent question answers
+function ep_recent_qquestions()
+{
+	$q = "select n.* from d_node n where n.status = 1 and n.comment = 0 order by n.sticky desc, n.changed desc limit 4"; // need to order comments in the rollup
+	$r = db_query(db_rewrite_sql($q));
+	while($data = db_fetch_object($r)) 
+	{
+		$n = node_load($data->nid);
+		$html = '<div class="title">'. l($n->title, 'node/'. $n->uid) .'</div>';
+		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .'</div>'; 
+		$list[] = $html;
+	}
+	$js = "
+ep.ep_recent_qquestions = function() {
+	$('#ep_recent_qquestions .title').hover(
+	function() {
+		$(this).next('.teaser').slideDown('slow');
+	},
+	function() {
+		$(this).next('.teaser').slideUp('fast');
+	});
+}
+$(document).ready(function() { ep.ep_recent_qquestions(); });
+";
+	drupal_add_js($js, 'inline');
+	return '<div id="ep_recent_qquestions">'. theme('item_list', $list) .'</div>';
+}
+
+
+function ep_recent_qanswers()
+{
+	$q = "select n.*, u.* from d_node n
+inner join d_comments c on c.nid = n.nid
+inner join d_users u on u.uid = c.uid
+inner join d_users_roles r on r.uid = u.uid
+where n.status = 1 and r.rid in (3,4,5,6)
+group by n.nid
+order by n.sticky desc, c.timestamp desc, n.changed desc
+limit 6"; // need to order comments in the rollup
+	$r = db_query(db_rewrite_sql($q));
+	while($data = db_fetch_object($r)) 
+	{
+		$n = node_load($data->nid);
+		$u = user_load($data->uid);
+		$html = $u->picture ? theme_image($u->picture, '', $u->name.'\'s Picture', array('height'=>100,'width'=>100), false) : '';
+		$html .= '<div class="title">'. l($n->title, 'node/'. $n->nid) .'</div>';
+		$html .= '<div class="teaser">'. node_teaser($n->teaser) .'</div>'; 
+		$html .= '<div class="trailer">Submitted by: '. l($u->name, 'user/'. $u->uid) .'</div>';
+		$list[] = $html;
+	}
+	return '<div id="ep_recent_qanswers">'. theme('item_list', $list) .'</div>';
+}
+
+
