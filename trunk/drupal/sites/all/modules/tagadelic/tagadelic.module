@@ -125,7 +125,39 @@ function tagadelic_page_chunk($vocs) {
   $tags = tagadelic_get_weighted_tags($vocs, variable_get('tagadelic_levels', 6), variable_get('tagadelic_page_amount', '60'));
   $tags = tagadelic_sort_tags($tags);
   $output = theme('tagadelic_weighted', $tags);
-
+/*
+array(20) {
+  [0]=>
+  object(stdClass)#19 (6) {
+    ["count"]=>
+    float(1.0986122886681)
+    ["tid"]=>
+    string(1) "2"
+    ["name"]=>
+    string(9) "addiction"
+    ["vid"]=>
+    string(1) "1"
+    ["number_of_posts"]=>
+    string(1) "3"
+    ["weight"]=>
+    float(5)
+  }
+  [1]=>
+  object(stdClass)#24 (6) {
+    ["count"]=>
+    float(1.0986122886681)
+    ["tid"]=>
+    string(1) "1"
+    ["name"]=>
+    string(7) "Alcohol"
+    ["vid"]=>
+    string(1) "1"
+    ["number_of_posts"]=>
+    string(1) "3"
+    ["weight"]=>
+    float(5)
+  }
+... */
   if (!$output) {
     return drupal_not_found();
   }

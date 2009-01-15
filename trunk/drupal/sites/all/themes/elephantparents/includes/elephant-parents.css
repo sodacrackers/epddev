@@ -2,7 +2,10 @@
 	 * Some custom styles for eparents
 	 */
  
-
+.ep-comments-notice {
+	margin-top: 2em;
+	}
+	
 	/* theme the user-location form */ 
 view-ep-professionals-maplist .views-exposed-widget {
 	}
