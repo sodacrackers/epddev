@@ -5,7 +5,18 @@
 .ep-comments-notice {
 	margin-top: 2em;
 	}
+#ep-welcome #ep_recent_qanswers li img {
+	float: left;
+	}
+#ep-welcome #ep_recent_qquestions {
+	height: 300px;
+	overflow: auto;
+	}
 	
+
+
+
+
 	/* theme the user-location form */ 
 view-ep-professionals-maplist .views-exposed-widget {
 	}
