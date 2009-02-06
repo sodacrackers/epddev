@@ -1,20 +1,45 @@
 	/*
 	 * Some custom styles for eparents
 	 */
- 
-.ep-comments-notice {
-	margin-top: 2em;
+.node .terms { 
+	float: none;
+	}
+.node .meta .terms .links:before { 
+	content: "Term Links: ";
+	}
+
+	/* theme the home page */
+#ep-welcome .panel-col-top .rounded_corner {
+	width: 50%;
+	float: left;
+	}
+#ep-welcome .panel-col-top {
+	float: left;
+	}
+#ep-welcome .panel-col-top .rounded_corner .item-list {
+	height: 260px;
+	overflow: auto;
 	}
 #ep-welcome #ep_recent_qanswers li img {
 	float: left;
 	}
-#ep-welcome #ep_recent_qquestions {
-	height: 300px;
-	overflow: auto;
+#ep-welcome #ep_recent_qanswers .trailer {
+	text-align: right;
+	font-style: italic;
 	}
-	
-
-
+#ep_recent_qquestions .teaser:hover { 
+	border-right: 1px solid #dcdcdc; 
+	border-bottom: 1px solid #dcdcdc; 
+	}
+#ep-welcome .date {
+	font-weight: normal;
+	}
+#ep-welcome #ep_recent_qquestions p {
+	margin-bottom: 0;
+	}
+#ep-welcome .more-link {
+	font-style: italic;
+	}
 
 
 	/* theme the user-location form */ 
@@ -29,3 +54,9 @@ view-ep-professionals-maplist .views-exposed-widget {
 	/*float: left;
 	padding-right: .5em;*/
 	}
+
+	/* other special sections */	
+.ep-comments-notice {
+	margin-top: 2em;
+	}
+
