@@ -44,23 +44,44 @@ function null_epQuestions_preprocess_comment_wrapper(&$variables) {
 function null_epQestions_comment_block() {
 }
 
-function epQestions_user($op, &$edit, &$account, $category = NULL) 
+function epQuestions_user($op, &$edit, &$account, $category = NULL) 
 {
-drupal_set_message('12');
+	if($op == 'insert') {
+		$u = user_load($account->uid); // get full user object with profile fields
+		if($u->profile_request_professional || $u->profile_request_columnist) {
+			$params = array(
+				'subject' => 'New user request',
+				'body' => array(
+					"A new user (". $u->mail .") has requested special status on the site.",
+					($u->profile_request_professional) ? "\t[ x ]Professional Status" : "\t[  ]Professional Status",
+					($u->profile_request_columnist) ? "\t[ x ]Columnist Status" : "\t[  ]Columnist Status",
+					"\t". strip_tags($u->profile_request_details),
+					"\nTo change activate, deactivate or change user roles, visit ". url('admin/user', array('absolute'=>true)) .".",
+					"\nThank you!",
+					),
+				);
+			$r = drupal_mail('epQuestions', 'user_registration_requests', 'admin@elephantparents.com', language_default(), $params);
+		}
+	}
 }
 
-function epQestions_user_register_submit() {
-print 'q';
-exit(var_dump(func_get_args()));
+function epQuestions_mail($key, &$message, $params) 
+{
+	$language = $message['language'];
+	$variables = user_mail_tokens($params['account'], $language);
+	if($key == 'user_registration_requests') {
+		$message['subject'] = $params['subject'];
+		$message['body'] = $params['body'];
+	}
 }
 
-function epQestions_form_submit() {
-print 'f';
-exit(var_dump(func_get_args()));
+
+function epQuestions_user_register_submit() {
+}
+
+function epQuestions_form_submit() {
 }
 
 
 function epQuestions_new_user_notify() {
-print 'w';
-exit(var_dump(func_get_args()));
 }

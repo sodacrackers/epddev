@@ -96,15 +96,6 @@ function phptemplate_get_ie_styles() {
 }
 
 /**
- * Return a themed breadcrumb trail.
- */
-function phptemplate_breadcrumb($breadcrumb) {
-	if (!empty($breadcrumb)) {
-		return '<div class="breadcrumb">'. implode(' › ', $breadcrumb) .'</div>';
-	}
-}
-
-/**
  * Override or insert PHPTemplate variables into the templates.
  */
 function phptemplate_preprocess_page(&$vars) {
@@ -115,6 +106,20 @@ function phptemplate_preprocess_page(&$vars) {
 	}
 }
 
+/**
+ * Return a themed breadcrumb trail.
+ */
+function phptemplate_breadcrumb($breadcrumb) {
+	if (!empty($breadcrumb)) {
+		return '<div class="breadcrumb">'. implode(' › ', $breadcrumb) .'</div>';
+	}
+}
+/**
+ * Return a themed link or list of links.
+ */
+function phptemplate_links($links, $attributes = array('class' => 'links')) {
+	return theme_links($links, $attributes = array('class' => 'links'));
+}
 
 function phptemplate_comment_submitted($comment) {
 	return t('!datetime — !username',
@@ -187,91 +192,87 @@ function phptemplate_menu_item($link, $has_children, $menu = '', $in_active_trai
 }
 
 function phptemplate_form_alter(&$form, $form_state, $form_id) {
-drupal_set_message(t('I should not see this'), 'error');
-	$form['#submit'] = array('ep_new_user_notify') + $form['#submit'];
-	return $form;
-}
-
-function ep_new_user_notify($form) {
-drupal_set_message(t('I should not see this 3'), 'error');
-	exit(var_dump(array('templ', $form, &$form_state)));
-	$mail = drupal_mail('user', $op, $account->mail, $language, $params);
 }
 
 
 
 
-
-
-
-// quick hack for http://drupal.org/node/261902
-if (!function_exists('array_diff_key')) {
-  function array_diff_key() {
-    $arrs = func_get_args();
-    $result = array_shift($arrs);
-    foreach ($arrs as $array) {
-      foreach ($result as $key => $v) {
-        if (array_key_exists($key, $array)) {
-          unset($result[$key]);
-        }
-      }
-    }
-    return $result;
-   }
+// quick hack for no function bug. http://drupal.org/node/261902
+if(!function_exists('array_diff_key')) 
+{
+	function array_diff_key() {
+		foreach (func_get_args() as $array) {
+			foreach (array_shift(func_get_args()) as $key => $v) {
+				if (array_key_exists($key, $array)) { 
+					unset($result[$key]); }
+			}
+		}
+		return $result;
+	}
 }
 
 
 // quick hack for block with recent question answers
 function ep_recent_qquestions()
 {
-	$q = "select n.* from d_node n where n.status = 1 and n.comment = 0 order by n.sticky desc, n.changed desc limit 4"; // need to order comments in the rollup
-	$r = db_query(db_rewrite_sql($q));
+	$q = "SELECT n.* from {node} n WHERE n.status = 1 and n.comment = 0 ORDER BY n.sticky desc, n.changed desc"; // need to order comments in the rollup
+	$r = db_query_range(db_rewrite_sql($q), null, 0, 10);
 	while($data = db_fetch_object($r)) 
 	{
 		$n = node_load($data->nid);
-		$html = '<div class="title">'. l($n->title, 'node/'. $n->uid) .'</div>';
-		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .'</div>'; 
+		$html = '<div class="title">'. l($n->title, 'node/'. $n->uid) .' <span class="date">'. format_date($n->changed, 'small') .'</span></div>';
+		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link($n->uid, 'Read more of this post') .'</div>'; 
 		$list[] = $html;
 	}
 	$js = "
-ep.ep_recent_qquestions = function() {
-	$('#ep_recent_qquestions .title').hover(
-	function() {
-		$(this).next('.teaser').slideDown('slow');
-	},
-	function() {
-		$(this).next('.teaser').slideUp('fast');
+ep.ep_recent_qquestions = function() 
+{
+	$('#ep_recent_qquestions .title a').each(function()
+	{
+		var link = $(this).attr('href');
+		var info = $(this).parent('.title').next('.teaser');
+		$(this).click(function() {
+			$(info).slideToggle('slow');
+			return false;
+		});
+//		$(info).click(function() { document.location = link; });
 	});
 }
 $(document).ready(function() { ep.ep_recent_qquestions(); });
 ";
 	drupal_add_js($js, 'inline');
-	return '<div id="ep_recent_qquestions">'. theme('item_list', $list) .'</div>';
+	return '<div id="ep_recent_qquestions">'. theme('item_list', $list) .'<div class="more-link">'. l('Archive', 'questions-answers') .'</div></div>';
 }
 
 
 function ep_recent_qanswers()
 {
-	$q = "select n.*, u.* from d_node n
-inner join d_comments c on c.nid = n.nid
-inner join d_users u on u.uid = c.uid
-inner join d_users_roles r on r.uid = u.uid
-where n.status = 1 and r.rid in (3,4,5,6)
-group by n.nid
-order by n.sticky desc, c.timestamp desc, n.changed desc
-limit 6"; // need to order comments in the rollup
-	$r = db_query(db_rewrite_sql($q));
+	global $user;
+	$q = "SELECT n.*, u.*, c.* from {node} n
+JOIN {comments} c on c.nid = n.nid
+JOIN {users} u on u.uid = c.uid
+JOIN {users_roles} r on r.uid = u.uid
+WHERE n.status = 1 and r.rid in (3,4,5,6)
+GROUP BY n.nid
+ORDER BY n.sticky desc, c.timestamp desc, n.changed desc"; // need to order comments in the rollup
+	$r = db_query_range(db_rewrite_sql($q), null, 0, 6);
 	while($data = db_fetch_object($r)) 
 	{
 		$n = node_load($data->nid);
 		$u = user_load($data->uid);
 		$html = $u->picture ? theme_image($u->picture, '', $u->name.'\'s Picture', array('height'=>100,'width'=>100), false) : '';
 		$html .= '<div class="title">'. l($n->title, 'node/'. $n->nid) .'</div>';
-		$html .= '<div class="teaser">'. node_teaser($n->teaser) .'</div>'; 
-		$html .= '<div class="trailer">Submitted by: '. l($u->name, 'user/'. $u->uid) .'</div>';
+		if($user->uid) {
+			$html .= '<div class="teaser answer">'. node_teaser($data->comment) .'</div>'; 
+		}
+		else {
+			$html .= '<div class="teaser">'. node_teaser($n->teaser) .'</div>'; 
+			$html .= '<span>'. l('Upgrade', 'contact/get-professional-status') .' or '. l('register', 'user/register') .' to view the latest answer.</span>';
+		}
+		$html .= '<div class="trailer">Answer Submitted By: '. l($u->name, 'user/'. $u->uid) .'</div>';
 		$list[] = $html;
 	}
-	return '<div id="ep_recent_qanswers">'. theme('item_list', $list) .'</div>';
+	return '<div id="ep_recent_qanswers">'. theme('item_list', $list) .'<div class="more-link">'. l('Archive', 'questions-answers') .'</div></div>';
 }
 
 
