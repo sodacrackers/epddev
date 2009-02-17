@@ -9,7 +9,7 @@ drupal_add_js(path_to_theme().'/includes/elephant-parents.js');
 function phptemplate_preprocess(&$variables, $hook) 
 {
 	global $user;
-	if($hook == 'page' && strstr(drupal_set_header(), '404 Not Found')) 
+	if($hook == 'page' && strpos(drupal_set_header(), '404 Not Found') !== false) 
 	{ // set a more useful error message and enable blocks
 		drupal_set_message('The page you requested can not be found. Please recheck the address (<tt>url</tt>) and try again.');
 		$variables['show_blocks'] = $variables['show_blocks'] ? $variables['show_blocks'] : true; // !! not getting a hook on this
@@ -18,7 +18,7 @@ function phptemplate_preprocess(&$variables, $hook)
 		$variables['content'] = $html;
 	}
 	
-	if($hook == 'page' && strstr(drupal_set_header(), '403 Forbidden')) 
+	if($hook == 'page' && strpos(drupal_set_header(), '403 Forbidden') !== false) 
 	{ // provide access information
 		drupal_set_message('Access denied for the resource or path given.');
 		$html = '<h3>Sorry!</h3> <p>Access is not allowed to the page your requested. Some sections of our site can only be visited by administrators, trusted columnists or community professionals.</p>';
@@ -221,7 +221,7 @@ function ep_recent_qquestions()
 	{
 		$n = node_load($data->nid);
 		$html = '<div class="title">'. l($n->title, 'node/'. $n->uid) .' <span class="date">'. format_date($n->changed, 'small') .'</span></div>';
-		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link($n->uid, 'Read more of this post') .'</div>'; 
+		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link('node/'. $n->uid, 'Read more of this post') .'</div>'; 
 		$list[] = $html;
 	}
 	$js = "
@@ -275,4 +275,52 @@ ORDER BY n.sticky desc, c.timestamp desc, n.changed desc"; // need to order comm
 	return '<div id="ep_recent_qanswers">'. theme('item_list', $list) .'<div class="more-link">'. l('Archive', 'questions-answers') .'</div></div>';
 }
 
-
+// Block for author information on node pages
+function ep_author_badge_block() 
+{
+	if(arg(0) != 'node' || !is_numeric(arg(1))) {
+		return;
+	}
+	$node = node_load(arg(1));
+	
+	// profile information
+	$profile = array();
+	$u = user_load($node->uid);
+	$profile[] = $u->picture ? theme_image($u->picture, '', $u->name .'\'s Picture', array('height'=>150,'width'=>150), false) : '';
+	$profile[] = check_markup($u->profile_biography);
+	$profile[] = $u->profile_freeform ? 'Interest areas: '. l($u->profile_freeform, 'professional-search') : '';  
+	$profile[] = '<em>Contact or learn more about '. l($u->name, 'user/'. $u->uid) .'</em>';  
+	$profile = theme_box('About '.$u->name, implode("\n<p>", $profile));
+	
+	// blog posts
+	$blogs = array();
+	$q = "SELECT n.* FROM {node} n WHERE n.status=1 AND n.type='blog' AND n.uid=%d ORDER BY n.sticky desc, n.changed desc, n.created desc"; 
+	$r = db_query_range(db_rewrite_sql($q), $node->uid, 0, 10);
+	while($d = db_fetch_object($r)) 
+	{
+		$blogs[] = l($d->title, 'node/'.$d->nid, array('alt' => $d->title));
+	}
+	$blogs = count($blogs) ? theme_item_list($blogs, 'My Blog Posts') : '';
+	
+	// other posts
+	$posts = array();
+	$q = "SELECT n.* FROM {node} n WHERE n.status=1 AND n.type NOT IN ('blog', 'question') AND n.uid=%d ORDER BY n.sticky desc, n.changed desc, n.created desc"; 
+	$r = db_query_range(db_rewrite_sql($q), $node->uid, 0, 10);
+	while($d = db_fetch_object($r)) 
+	{
+		$posts[] = l($d->title, 'node/'. $d->nid, array('alt' => $d->title)) .' <small><em>'. format_date($d->created, 'small') .', '. (int)$d->comments .' comments</em></small>';
+	}
+	$posts = count($posts) ? theme_item_list($posts, 'Articles and Other Posts') : '';
+	
+	// answered questions
+	$questions = array();
+	$q = "SELECT n.*, c.* FROM {comments} c JOIN {node} n ON c.nid=n.nid WHERE c.status=1 AND n.status=1 AND n.type='question' AND c.uid=%d ORDER BY n.sticky desc, c.timestamp desc"; 
+	$r = db_query_range(db_rewrite_sql($q), $node->uid, 0, 5);
+	while($d = db_fetch_object($r)) 
+	{
+		$questions[] = '<strong class="title">'. l($d->subject, 'node/'. $d->nid, array('alt' => 'Re. '. $d->title)) .'</strong> <span class="teaser">'. node_teaser($d->comment, null, 220) .'</span> <span class="more-link"><em>'. format_date($d->timestamp, 'small') .' '. l('Read More', 'node/'. $d->nid) .'</em></span>';
+	}
+	$questions = count($questions) ? theme_item_list($questions, 'My Question Answers') : '';
+	
+	return $profile . $blogs . $posts . $questions;
+}
