@@ -1,6 +1,17 @@
 	/*
 	 * Some custom styles for eparents
 	 */
+#footer ul {
+	margin: 0;
+	padding: 0;
+	list-style-type: none;
+	text-align: center;
+	}
+#footer ul li, #footer ul li a { /* ul li.leaf a, ul li.expanded a, ul li.collapsed a */
+	display: inline; 
+	background: none;
+	}
+
 .node .terms { 
 	float: none;
 	}
@@ -19,6 +30,7 @@
 #ep-welcome .panel-col-top .rounded_corner .item-list {
 	height: 260px;
 	overflow: auto;
+	padding-right: .5em;
 	}
 #ep-welcome #ep_recent_qanswers li img {
 	float: left;
