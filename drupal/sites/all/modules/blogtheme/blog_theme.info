@@ -1,0 +1,11 @@
+; $Id: blog_theme.info,v 1.2 2008/04/16 08:58:52 augustin Exp $
+name = blogtheme
+description = When visiting a member's blog or personal page, people will see the theme chosen by that member.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-09-30
+version = "6.x-1.4"
+core = "6.x"
+project = "blogtheme"
+datestamp = "1222765503"
+

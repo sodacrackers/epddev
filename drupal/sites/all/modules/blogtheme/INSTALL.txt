@@ -1,0 +1,10 @@
+$Id: INSTALL.txt,v 1.1.6.1 2008/06/27 04:47:17 augustin Exp $
+
+To install:
+1) put the blogtheme directory into the /sites/all/modules/ directory.
+2) activate the module at /admin/modules 
+3) check the new permissions at /admin/user/permissions
+4) check the module settings at /admin/settings/blog_theme
+5) remember to support the maintainer. See README.txt
+
+
