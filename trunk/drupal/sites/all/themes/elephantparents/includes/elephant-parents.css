@@ -1,6 +1,14 @@
 	/*
 	 * Some custom styles for eparents
 	 */
+.user-picture {
+	float: right;
+	margin: 1.5em;
+	}
+.profile .user-picture img {
+	border: 1px solid green;
+	}
+
 #footer ul {
 	margin: 0;
 	padding: 0;
@@ -21,7 +29,7 @@
 
 	/* theme the home page */
 #ep-welcome .panel-col-top .rounded_corner {
-	width: 50%;
+	width: 48%;
 	float: left;
 	}
 #ep-welcome .panel-col-top {
