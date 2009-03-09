@@ -164,6 +164,48 @@ function phptemplate_box($title = '', $content = '', $region = 'main') {
 	return '<h2 class="title">'. $title .'</h2><div>'. $content .'</div>';
 }
 
+/*
+ * Allow resizing of user images for pages. 
+ * Adapted from http://2bits.com/articles/different-size-user-pictures-avatars-different-pages.html
+ */
+function phptemplate_user_picture($account, $size = array('height'=>120,'width'=>120))
+{
+	// show larger image on page
+	if(arg(0) == 'user' && arg(2) == '') {
+		$size = array('height'=>400,'width'=>400);
+	}
+	
+	$new_image = variable_get('user_picture_default', '');
+	if($account->picture && file_exists($account->picture)) 
+	{
+		$new_image = $account->picture;
+		$info = image_get_info($account->picture);
+		// resize the image
+		if($info['width'] > $size['width'] && $info['height'] > $size['height']) {
+			$new_image = dirname($account->picture) . '/picture-' . $account->uid .'.'. $size['width'] .'x'. $size['height'] .'.'. $info['extension'];
+		}
+		if(!file_exists($new_image) || (filectime($new_image) < filectime($account->picture))) {
+			image_scale($account->picture, $new_image, $size['width'], $size['height']);
+			$new_image = file_create_url($new_image);
+		}
+	}
+	if($new_image) 
+	{
+		$name = $account->name ? $account->name : variable_get('anonymous', 'Anonymous');
+		$alt = t('View @name\'s profile.', array('@name'=>$name));
+		$image = theme('image', $new_image, $alt);
+		if(!empty($account->uid) && user_access('access user profiles')) {
+			$image = l($image, 'user/'. $account->uid, array('html'=>true, 'attributes'=>array('title'=>$alt)));
+		}
+		return "<div class=\"ep-avatar user-picture\">$image</div>";
+	}
+} 
+
+
+
+
+
+
 /**
  * Returns the rendered local tasks. The default implementation renders
  * them as tabs. Overridden to split the secondary tasks.
@@ -193,9 +235,6 @@ function phptemplate_menu_item($link, $has_children, $menu = '', $in_active_trai
 
 function phptemplate_form_alter(&$form, $form_state, $form_id) {
 }
-
-
-
 
 // quick hack for no function bug. http://drupal.org/node/261902
 if(!function_exists('array_diff_key')) 
@@ -324,3 +363,9 @@ function ep_author_badge_block()
 	
 	return $profile . $blogs . $posts . $questions;
 }
+
+
+
+
+
+

@@ -7,8 +7,8 @@ ep = {}; // Elephant Parents namespace for functions and variables
 
 ep.init = function() 
 { // Any functions to load with the page
-	ep.scale_images('.picture img', 120);
-	ep.scale_images('#ep-community .view-content img', 90);
+	//ep.scale_images('.picture img', 120);
+	//ep.scale_images('#ep-community .view-content img', 90);
 
 }
 
