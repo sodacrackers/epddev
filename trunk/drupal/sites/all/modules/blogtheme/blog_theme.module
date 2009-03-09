@@ -1,0 +1,290 @@
+<?php
+// $Id: blog_theme.module,v 1.20.2.8 2008/09/30 08:58:26 augustin Exp $
+
+/**
+ * @file
+ * This module gives users the option of always having their blog displayed using their default theme
+ * using the $custom_theme variable
+ *
+ * If you have any ideas/patches or requests, please post them
+ * on the project's issue queue at drupal.org
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function blog_theme_help($section, $arg) {
+  switch ($section) {
+    case '':
+      return '';
+  }
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function blog_theme_init() {
+  global $custom_theme;
+  global $user;
+
+  switch (arg(0)) {
+  case 'user':
+    // If the settings say we should use the sites' default theme on user profile pages, break here.
+    if (variable_get('blog_theme_user_profile', 1) == 2) {
+      break;
+    }
+    // else fallthrough...
+  case 'blog':
+  case 'shoutbook':
+    if (arg(1) !='') {
+      $uid = arg(1);
+      $themes = list_themes();
+      $account = user_load(array((is_numeric($uid) ? 'uid' : 'name') => $uid, 'status' => 1));
+      $custom_theme = !empty($account->blog_theme) && $themes[$account->blog_theme]->status ? $account->blog_theme : variable_get('theme_default', 'garland');
+    }
+    break;
+  case 'node':
+    $nid = arg(1);
+    $themes = list_themes();
+    if ($nid == 'add') { //  /node/add
+      $add_type = arg(2); // /node/add/type
+      $allowed_types = variable_get('blog_theme_node_types', array());
+      if (!empty($allowed_types[$add_type])) {
+        $account = user_load(array('uid' => $user->uid, 'status' => 1));
+        $custom_theme = !empty($account->blog_theme) && $themes[$account->blog_theme]->status ? $account->blog_theme : variable_get('theme_default', 'garland');
+      }
+      break;
+    }
+    elseif ($node = node_load(array('nid' => $nid))) { // /node/$nid
+      $allowed_types = variable_get('blog_theme_node_types', array());
+      if (!empty($allowed_types[$node->type])) {
+        $uid = $node->uid;
+        $account = user_load(array('uid' => $uid, 'status' => 1));
+        $custom_theme = !empty($account->blog_theme) && $themes[$account->blog_theme]->status ? $account->blog_theme : variable_get('theme_default', 'garland');
+      }
+    }
+    break;
+  case 'comment':
+    $nid = arg(2);
+    $themes = list_themes();
+    $node = node_load(array('nid' => $nid));
+    if ($node->type == 'blog') {
+      $uid = $node->uid;
+      $account = user_load(array('uid' => $uid, 'status' => 1));
+      $custom_theme = !empty($account->blog_theme) && $themes[$account->blog_theme]->status ? $account->blog_theme : variable_get('theme_default', 'garland');
+    }
+    break;
+  case 'image':
+    $uid = arg(2);
+    $themes = list_themes();
+    $account = user_load(array((is_numeric($uid) ? 'uid' : 'name') => $uid, 'status' => 1));
+    $custom_theme = !empty($account->blog_theme) && $themes[$account->blog_theme]->status ? $account->blog_theme : variable_get('theme_default', 'garland');
+    break;
+  }
+
+}
+
+/**
+ * Implementation of hook_menu().
+ *
+ * grabs the theme pref from the currently viewed blog's user object and puts in the $custom_theme variable
+ *
+ */
+function blog_theme_menu() {
+  $items = array();
+
+  $items['admin/settings/blog_theme'] = array(
+    'title' => 'Blog Theme settings',
+    'description' => 'Set content types, and default user page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('blog_theme_admin_settings_form'),
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('access administration pages'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function blog_theme_perm() {
+  return array('select different blog theme');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function blog_theme_theme() {
+  return array(
+    'blog_theme_select_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function blog_theme_user($op, &$edit, &$account, $category = NULL) {
+  if ($op == 'form' && $category == 'account') {
+    if (user_access('select different blog theme')) {
+      foreach (list_themes() as $theme) {
+        if ($theme->status) {
+          $enabled[] = $theme;
+        }
+      }
+
+      if (count($enabled) > 1) {
+        ksort($enabled);
+
+        $form['themes'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Your blog theme configuration'),
+          '#description' => t('Selecting a different theme will change the look of your own blog for both yourself and other visitors.'),
+          '#collapsible' => TRUE,
+          '#theme' => 'blog_theme_select_form'
+        );
+
+        foreach ($enabled as $info) {
+          // For the default theme, revert to an empty string so the user's theme updates when the site theme is changed.
+          $info->key = $info->name == variable_get('theme_default', 'garland') ? '' : $info->name;
+
+          $info->screenshot = dirname($info->filename) .'/screenshot.png';
+          $screenshot = file_exists($info->screenshot) ? theme('image', $info->screenshot, t('Screenshot for %theme theme', array('%theme' => $info->name)), '', array('class' => 'screenshot'), FALSE) : t('no screenshot');
+
+          $form['themes'][$info->key]['screenshot'] = array('#value' => $screenshot);
+          $form['themes'][$info->key]['description'] = array(
+            '#type' => 'item', 
+            '#title' => $info->name,  
+            '#value' => dirname($info->filename) . ($info->name == variable_get('theme_default', 'garland') ? '<br /> <em>'. t('(site default theme)') .'</em>' : '')
+          );
+          $options[$info->key] = '';
+        }
+
+        $form['themes']['blog_theme'] = array(
+          '#type' => 'radios', 
+          '#options' => $options, 
+          '#default_value' => !empty($edit['blog_theme']) ? $edit['blog_theme'] : ''
+        );
+        $form['#weight'] = 2.5;
+        $form_to_return['blog_theme_select'] = $form;
+        return $form_to_return;
+      }
+    }
+  }
+}
+
+
+function theme_blog_theme_select_form($form) {
+  foreach (element_children($form) as $key) {
+    $row = array();
+    if (isset($form[$key]['description']) && is_array($form[$key]['description'])) {
+      $row[] = drupal_render($form[$key]['screenshot']);
+      $row[] = drupal_render($form[$key]['description']);
+      $row[] = drupal_render($form['blog_theme'][$key]);
+    }
+    $rows[] = $row;
+  }
+
+  $header = array(t('Screenshot'), t('Name'), t('Selected'));
+  $output = theme('table', $header, $rows);
+  return $output;
+}
+
+/**
+ * Menu callback: form builder for settings page.
+ */
+function blog_theme_admin_settings_form() {
+  global $user;
+  $form = array();
+
+  $collapsed = TRUE;
+  $time = time();
+  $time_limit = $time - (60 * 60 * 24 * 30);
+  if (variable_get('blog_theme_supported_' . $user->uid, 0) < $time_limit) {
+    $collapsed = FALSE;
+    variable_set('blog_theme_supported_' . $user->uid, $time);
+  }
+
+  $form['blog_theme_support_maintainers'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Support'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $collapsed,
+  );
+
+  $form['blog_theme_support_maintainers']['blog_theme_support_text'] = array(
+    '#value' => '<p>'
+      . t("<strong>The module blog_theme is charity-ware</strong>.") .'<br />'
+      . t("Please contribute back by supporting the charity work of the following web sites. ") .'<br />'
+      . t("None of the web sites listed here are for profit, and none of them carry advertising.") .'<br />'
+      . t("They are all <strong>web sites dedicated to creating a better tomorrow for the whole society</strong>.") .'<br />'
+      .'</p>'
+      .'<ul>'
+      .'<li>'. t('<a href="http://activistsolutions.org/">Activist Solutions</a>: harvesting grassroots power.') .'</li>'
+      .'<li>'. t('<a href="http://www.reuniting.info/">Reuniting</a>: healing with sexual relationships.') .'</li>'
+      .'<li>'. t('<a href="http://overshoot.tv/">Overshoot TV</a>: making high quality videos and documentaries promoting environmental and economical sustainability.') .'</li>'
+      .'<li>'. t('<a href="http://minguo.info/">Minguo.info</a>: promotting better voting systems, and an experiment in direct democracy.') .'</li>'
+      .'<li>'. t('<a href="http://www.wechange.org/">We Change</a>: because we live in a world of solutions...') .'</li>'
+      .'</ul>'
+      .'<p>'
+      . t("You can support those web sites in the following ways:") .'<br />'
+      .'</p>'
+      .'<ul>'
+      .'<li>'. t("Blog about them.") .'</li>'
+      .'<li>'. t("Put links in a block in a sidebar.") .'</li>'
+      .'<li>'. t("Put links in any other logical place in your web site, where your visitors will find the information useful.") .'</li>'
+      .'<li>'. t("Register and participate if they match your own interest!") .'</li>'
+      .'<li>'. t("We also appreciate if, on behalf of this maintainer,  you help <em>any charity of your choice</em>, or/and make a donation to them.") .'</li>'
+      .'</ul>'
+      .'<p>'
+      . t("Please, let the maintainer know about the options you chose.") .'<br />'
+      .'</p>'
+      .'<p>'
+      . t("Thank you for your support and cooperation.") .'<br />'
+      .'</p>',
+  );
+
+  $form['blog_theme_user_profile'] = array(
+    '#type' => 'select',
+    '#title' => t('Which theme to use on the user profile page?'),
+    '#description' => t('If a user has selected a different theme for his/her blog, what theme shall be used on his/her user account page?'),
+    '#options' => array(1 => t("Use the user's selected theme "), 2 => t("Use the site's default theme")),
+    '#default_value' => variable_get('blog_theme_user_profile', 1),
+  );
+
+  $node_types = node_get_types();
+  $options = array();
+  foreach ($node_types AS $type => $o) {
+    $options[$type] = $o->name;
+  }
+  $form['blog_theme_node_types'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Which node types shall the user theme be applied to?'),
+    '#description' => t('You can select several node types (e.g. blog) for which the user theme will be applied.'),
+    '#options' => $options,
+    '#default_value' => variable_get('blog_theme_node_types', array()),
+  );
+
+  $form['blog_theme_support_websites'] = array(
+    '#type' => 'fieldset',
+    '#title' => t("Other charitable web sites..."),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['blog_theme_support_websites']['blog_theme_support_other'] = array(
+    '#value' => '<p>'
+      . t("If your web site meets <em>all</em> the following criteria, you can ask for it to be listed here.")
+      .'</p>'
+      .'<ul>'
+      .'<li>'. t('It uses blog_theme module.') .'</li>'
+      .'<li>'. t('It is a charity (registered or not) dedicated to creating a better society.') .'</li>'
+      .'<li>'. t('It is not for profit.') .'</li>'
+      .'<li>'. t('It does not carry any advertising (e.g. google ads).') .'</li>'
+      .'</ul>',
+  );
+
+  return system_settings_form($form);
+}
+

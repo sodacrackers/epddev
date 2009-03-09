@@ -1,0 +1,30 @@
+<?php
+// $Id: blog_theme.install,v 1.2.2.1 2008/09/30 08:58:26 augustin Exp $
+
+function blog_theme_update_5001() {
+  $ret = array();
+
+  // activate the new menu item:
+  cache_clear_all();
+  drupal_set_message(t('The module blog_theme has been updated and new features added. Check the <a href="!url">settings page</a>.', array('!url' => url('admin/settings/blog_theme'))));
+
+  return $ret;
+}
+
+/**
+ * Delete obsolete variable.
+*/
+function blog_theme_update_6000() {
+  $ret = array();
+  variable_del('blog_theme_supported');
+  return $ret;
+}
+
+
+/**
+ * Implementation of hook_uninstall().
+*/
+function outline_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'blog_theme_%%'");
+}
+

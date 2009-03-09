@@ -1,0 +1,43 @@
+# $Id: CHANGELOG.txt,v 1.4.2.7 2008/09/30 08:58:26 augustin Exp $
+# CHANGELOG.txt
+################
+
+
+* 9/30 Removed obsolete variable.
+* 9/30 Added hook_uninstall().
+* 8/14 Fix more notices.
+* 8/14 Space out some code for better readability.
+* 8/14 Fix bug when accessing node/add and node/add/*.
+* 8/13 Added 'supported' collapsed setting.
+* 7/16 Fix another E_ALL notice when accessing /node/xyz where xyz is anything not corresponding to a node ID.
+* 7/13 Fix E_ALL notice. 
+
+# tag DRUPAL-6--1-3 : 27th June 2008. 
+# ====================================
+
+* Update README.txt and INSTALL.txt
+
+# tag DRUPAL-6--1-0 : 16th April 2008. 
+# ====================================
+
+* Full upgrade to Drupal 6.
+
+# tag DRUPAL-5--2-0 : 10th April 2008. 
+# ====================================
+
+* Fixed logic so that when a user is adding a node (/node/add/node_type), the user's theme is used if the node type is among the allowed ones.
+* Added setting: which node types should use the users' theme? Beside 'blog', you can add any CCK or custom node type.
+* Added setting: should a user profile page use the site's default theme, or the user's theme? 
+* Added a setting page, for the three items listed above.
+* 34360: separate the blog theme from the site theme. 
+  A new perm is added: 'select different blog theme' which is in addition to the core perm 'select different theme'.
+  Now the user has two theme settings: one for the whole site, one for his/her blog.
+* Hook_menu was executed twice for lack of if $may_cache loop.
+
+# tag DRUPAL-5--1-2 : 28th July 2007. 
+# ====================================
+
+* Garland is the new default theme for Drupal 5.
+* 162389: Make theme consistent when adding a comment. Patch by Chris21, with thanks.
+* Upgrade to Drupal 5.
+
