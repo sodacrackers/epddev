@@ -1,5 +1,5 @@
 <?php
-// $Id: og_views.views.inc,v 1.8 2008/11/03 15:02:45 weitzman Exp $
+// $Id: og_views.views.inc,v 1.12 2008/12/31 13:49:32 weitzman Exp $
 
 /**
  * Implementation of hook_views_handlers().
@@ -12,7 +12,7 @@ function og_views_views_handlers() {
     'handlers' => array(
       // filter
       'og_views_handler_filter_og_group_nid' => array(
-        'parent' => 'views_handler_filter_numeric',
+        'parent' => 'views_handler_filter_many_to_one',
       ),
       'og_views_handler_filter_og_type_all' => array(
         'parent' => 'views_handler_filter',
@@ -264,9 +264,6 @@ function og_views_data_og_ancestry() {
       'field' => 'nid',
     ),
   );
-  
-  $filterhelp = t('<strong>Posts</strong> are filtered for specified organic groups. The page context (if Display is a page) will be set to the first listed group. That means that blocks and breadcrumbs (and theme and locale, if applicable) will be based upon the first specified node id.');
-  
   $data['og_ancestry']['group_nid'] = array(
     'title' => t('Groups'),
     'help' => t('The groups for a post.'),
@@ -284,14 +281,15 @@ function og_views_data_og_ancestry() {
     'filter' => array(
       'handler' => 'og_views_handler_filter_og_group_nid',
       'numeric' => TRUE,
-      'help' => $filterhelp,
+      'allow empty' => TRUE, // To select posts with no groups. Requires http://drupal.org/node/340824
+      'help' => t('<strong>Posts</strong> are filtered for specific organic groups.'),
     ),
     'argument' => array(
       'name' => t('Post: in specified group (by number)'),
       'name field' => 'title', // the field to display in the summary.
       'validate type' => 'nid',
       'handler' => 'og_views_handler_argument_og_group_nid',
-      'help' => $filterhelp,
+      'help' => t('<strong>Posts</strong> are filtered for specified organic groups. The page context (if Display is a page) will be set to the first listed group. That means that blocks and breadcrumbs (and theme and locale, if applicable) will be based upon the first specified node id.'),
     ),
   );
   $data['og_ancestry']['nid'] = array(
@@ -363,8 +361,13 @@ function og_views_data_og_uid() {
     // 'help' => t('foo')
     'filter' => array(
       'handler' => 'views_handler_filter_user_current',
-      'help' => t("OG: Group in user's groups"),
+      'help' => t("OG: Group in current user's groups"),
     ),
+   'argument' => array(
+     'title' => t('Member of a group'),
+     'handler' => 'views_handler_argument_numeric',
+     'help' => t("OG: Group in specified user's groups. Note that OG usually considers a user's groups to be private information. You may want to add access control to your View or validation to this argument."),
+   ),
   );
   $data['og_uid']['managelinkadmin'] = array(
     'title' => t('OG: Admin manage link'),
@@ -424,9 +427,6 @@ function og_views_data_og_uid() {
     'field' => array(
       'handler' => 'og_views_handler_field_og_is_manager',
       'click sortable' => FALSE,
-    ),
-    'filter' => array(
-      'handler' => 'views_handler_filter_boolean_operator',
     ),
   );
   $data['og_uid']['created'] = array(

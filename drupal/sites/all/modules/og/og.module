@@ -1,5 +1,5 @@
 <?php
-// $Id: og.module,v 1.610 2008/11/21 17:09:31 weitzman Exp $
+// $Id: og.module,v 1.618 2009/01/02 03:58:21 weitzman Exp $
 
 // Selective groups states. chosen by the group admin
 define ('OG_OPEN', 0);
@@ -237,10 +237,6 @@ function og_menu_access_invite($node) {
   return og_is_group_member($node) && ($node->og_selective < OG_INVITE_ONLY || og_is_group_admin($node));
 }
 
-function og_menu_access_picture($gid) {
-  return og_is_picture() && og_is_group_member($gid);
-}
-
 /**
  * Check a user's membership in a group. 
  * 
@@ -382,7 +378,7 @@ function og_init() {
     og_set_language($node);
     // In D7, restrict use of $_SESSION if this lands http://drupal.org/node/201122.
     if ($user->uid || variable_get('cache', CACHE_DISABLED) == CACHE_DISABLED) {
-      $_SESSION['og_last'] = $node;
+      $_SESSION['og_last'] = $node->nid;
     }
   }
 }
@@ -518,8 +514,8 @@ function og_set_theme($nid) {
       default:
         // Node is in multiple groups. Preference goes to the group we showed on the prior page view (if any),
         // Then to a group the current user is a member of.
-        if (isset($_SESSION['og_last']) && in_array($_SESSION['og_last']->nid, $node->og_groups)) {
-          $group_node = node_load($_SESSION['og_last']->nid);
+        if (isset($_SESSION['og_last']) && in_array($_SESSION['og_last'], $node->og_groups)) {
+          $group_node = node_load($_SESSION['og_last']);
           if (!$custom_theme) {
             $custom_theme = $group_node->og_theme;
           }
@@ -682,10 +678,10 @@ function og_save_subscription($gid, $uid, $args = array()) {
   }
 }
 
-function og_delete_subscription($gid, $uid){
+function og_delete_subscription($gid, $uid, $args = array()){
   $sql = "DELETE FROM {og_uid} WHERE nid = %d AND uid = %d";
   db_query($sql, $gid, $uid);
-  module_invoke_all('og', 'user delete', $gid, $uid, array());
+  module_invoke_all('og', 'user delete', $gid, $uid, $args);
 }
 
 function og_approve($node, $account, $token) {
@@ -1261,7 +1257,7 @@ function og_home_empty($node) {
   else {
     $msg = t('No public posts in this group.');
     if (!$user->uid) {
-      $msg .= ' '. t('You must <a href="!register">register</a> or <a href="!login">login</a> and become a member in order to post messages, and view any private posts.', array('!register' => url("user/register", array('query' => $dest)), '!login' => url("user/login", array('query' => $dest))));
+      $msg .= t(' You must <a href="!register">register</a> or <a href="!login">login</a> and become a member in order to post messages, and view any private posts.', array('!register' => url("user/register", array('query' => $dest)), '!login' => url("user/login", array('query' => $dest))));
     }
     // TODOL: hide this from pending members too
     elseif ($node->og_selective < OG_INVITE_ONLY) {
@@ -1311,7 +1307,7 @@ function og_group_form($node, $form_state) {
     '#weight' => module_exists('content') ? content_extra_field_weight($node->type, 'og_description') : -4,
   );
 
-  $default = isset($node->nid) ? $node->og_selective : OG_OPEN;
+  $default = isset($node->og_selective) ? $node->og_selective : OG_OPEN;
   $options = array(
     t('Open - membership requests are accepted immediately.'),
     t('Moderated - membership requests must be approved.'),
@@ -1352,7 +1348,7 @@ function og_group_form($node, $form_state) {
       $form['og_register'] = array(
         '#type' => 'checkbox',
         '#title' => t('Registration form'),
-        '#default_value' => $node->nid ? $node->og_register : $default,
+        '#default_value' => isset($node->og_register) ? $node->og_register : $default,
         '#weight' => module_exists('content') ? content_extra_field_weight($node->type, 'og_register') : 0, 
         '#description' =>t('May users join this group during registration? If checked, a corresponding checkbox will be added to the registration form.'),
       );
@@ -1383,7 +1379,7 @@ function og_group_form($node, $form_state) {
       $form['og_directory'] = array(
         '#type' => 'checkbox', 
         '#title' => t('List in groups directory'),  
-        '#default_value' => $node->nid ? $node->og_directory : $default, 
+        '#default_value' => isset($node->og_directory) ? $node->og_directory : $default, 
         '#weight' => module_exists('content') ? content_extra_field_weight($node->type, 'og_directory') : 0,
         '#description' => t('Should this group appear on the <a href="@url">list of groups page</a> (requires OG Views module)? Disabled if the group is set to <em>private group</em>.', array('@url' => url('og'))));
       break;    
@@ -1460,6 +1456,12 @@ function og_presave_group(&$node) {
 
 function og_devel_generate(&$node) {
   if (og_is_group_type($node->type)) {
+    // Don't let anon own a group. They can edit all group nodes, and more. Could potentially be fixed by devel respecting
+    // content type create permissions.
+    if ($node->uid == 0) {
+      $node->uid = 1;
+    }
+    
     $node->og_selective = rand(0,3);
     $can_join = $node->og_selective <= OG_MODERATED;
     $open_join = $node->og_selective < OG_MODERATED;
@@ -1701,7 +1703,7 @@ function og_form_alter(&$form, &$form_state, $form_id) {
  * Implementation of hook_content_extra_fields.
  */
 function og_content_extra_fields($type_name) {
-  $extras = array();
+  $extra = array();
 
   if (og_is_group_post_type($type_name)) {
     $extra['og_nodeapi'] = array(
@@ -2342,8 +2344,9 @@ function og_block($op = 'list', $delta = 0, $edit = array()) {
     // Now provided by og_views. Please don't reuse this number 4
     // $blocks[4]['info'] = t('My groups');
     
-    $blocks[5]['info'] = t('Group notifications');
-    $blocks[5]['cache'] = BLOCK_NO_CACHE;
+    // Notification modules must now provide this.
+    // $blocks[5]['info'] = t('Group notifications');
+    // $blocks[5]['cache'] = BLOCK_NO_CACHE;
     
     // Now provided by og_views. Please don't reuse this number 6
     // $blocks[6]['info'] = t('Group network');
@@ -2366,8 +2369,6 @@ function og_block($op = 'list', $delta = 0, $edit = array()) {
         return og_block_details();
       case 3:
        return og_block_new();
-      case 5:
-        return og_block_notifications();
     }
   }
   elseif ($op == 'configure') {
@@ -2411,17 +2412,6 @@ function og_block($op = 'list', $delta = 0, $edit = array()) {
         }
         break;
     }
-  }
-}
-
-function og_block_notifications() {
-  global $user;
-  
-  if ($groupnode = og_get_group_context()) {
-    $content = t('This group offers a <a href="@subscription">subscription option</a>.', array('@subscription' => url('og/manage/'. $groupnode->nid)));
-    $block['content'] = $content;
-    $block['subject'] = t('Group notifications');
-    return $block;
   }
 }
 
