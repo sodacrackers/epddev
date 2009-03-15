@@ -1,5 +1,5 @@
 <?php
-// $Id: og_views.module,v 1.10 2008/11/19 03:54:58 weitzman Exp $
+// $Id: og_views.module,v 1.14 2009/01/14 16:28:07 weitzman Exp $
 
 /**
  * Implementation of hook_menu().
@@ -29,6 +29,12 @@ function og_views_menu() {
   return $items;
 }
 
+function og_menu_access_picture($gid) {
+  $view = views_get_view('og_members_faces');
+  return og_is_picture() && og_is_group_member($gid) && !$view->disabled;
+}
+
+
 /**
  * Implementation of hook_views_api().
  */
@@ -48,7 +54,7 @@ function og_views_feed($node) {
   // TODOL: not working
   $view->override_path = "node/$node->nid";
   $view->set_arguments(array($node->nid));
-  $view->display['feed']->display_options['style_options']['description'] = $node->og_description;
+  $view->display_handler->set_option('style_options', array('description' => $node->og_description));
   print $view->render();
 }
 
@@ -138,52 +144,79 @@ function og_views_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
 }
 
 /**
+ * Implementation of hook_form_TAG_alter().
+ */
+function og_views_form_og_admin_settings_alter(&$form, $form_state) {
+  $views = views_get_all_views();
+
+  $options = array();
+  foreach ($views as $key => $view) {
+    if (substr($key, 0, strlen('og_ghp_')) == 'og_ghp_') {
+      $options[$key] = $view->name;
+    }
+  }
+  $form['og_settings']['group_details']['og_home_page_view'] = array(
+    '#type' => 'select',
+    '#title' => t('Group home page view'),
+    '#description' => t('Pick a View for your group home page. Only Views whose names start with <strong>og_ghp_</strong> are eligible. The View determines the layout of your group home page. You may alter the presentation using typical Views themeing techniques. See the Theme information link when editing your View and also see the Theme section of the !README. Also note that group admins can override this presentation using the included <em>Organic Groups Panels</em> module.', array('!README' => og_readme())),
+    '#options' => array(0 => t('None')) + $options,
+    '#default_value' => variable_get('og_home_page_view', 'og_ghp_ron'),
+  );
+}
+
+/**
  * Implementation of hook_form_alter().
  */
 function og_views_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'og_admin_settings') {
-    $views = views_get_all_views();
-
-    $options = array();
-    foreach ($views as $key => $view) {
-      if (substr($key, 0, strlen('og_ghp_')) == 'og_ghp_') {
-        $options[$key] = $view->name;
-      }
-    }
-
-    $form['og_settings']['group_details']['og_home_page_view'] = array(
-      '#type' => 'select',
-      '#title' => t('Group home page view'),
-      '#description' => t('Pick a View for your group home page. Only Views whose names start with <strong>og_ghp_</strong> are eligible. The View determines the layout of your group home page. You may alter the presentation using typical Views themeing techniques. See the Theme information link when editing your View and also see the Theme section of the !README. Also note that group admins can override this presentation using the included <em>Organic Groups Panels</em> module.', array('!README' => og_readme())),
-      '#options' => $options,
-      '#default_value' => variable_get('og_home_page_view', 'og_ghp_ron'),
-    );
-  }
-  elseif ($form_id == 'views_exposed_form' && $form_state['view']->name == 'og_search') {
+  if ($form_id == 'views_exposed_form' && $form_state['view']->name == 'og_search') {
     $form['submit']['#value'] = t('Search group');
   }
 }
 
+/**
+ * Embed the configured group homepage. 
+ */ 
 function og_views_view_group($node, $teaser, $page) {
-  $name = variable_get('og_home_page_view', 'og_ghp_ron');
-  $view = views_get_view($name);
-  if (!$view) { 
-    drupal_set_message(t('The View %name was not found. Check your variables table or settings.php.', array('%name' => $name)), 'error');
+  if ($name = variable_get('og_home_page_view', 'og_ghp_ron')) {
+    // There is a view defiened to act as the group's home page.
+    $view = views_get_view($name);
+    if (!$view) { 
+      drupal_set_message(t('The View %name was not found. Check your variables table or settings.php.', array('%name' => $name)), 'error');
+    }
+    else {
+      $built = $view->preview('default', array($node->nid));
+    }
+  
+    // Views will set either total_rows or num_rows depending on whether
+    // View has a pager, or might show an empty text.
+    if (!empty($view->total_rows) || !empty($view->num_rows) || !empty($view->page_empty) || !$view->display_handler->get_option('empty')) {
+      $node->content['view'] = array('#value' => $built);
+    }
+    elseif (empty($_POST)) {
+      // If views hasn't show any text we show og's empty text.
+      // Otherwise show it to everybody.
+      og_home_empty($node);
+    }
+    drupal_set_title(filter_xss_admin($view->build_info['title']));
   }
-  else {
-    $built = $view->preview('default', array($node->nid));
+  else { 
+    drupal_set_title(filter_xss_admin($node->title));
+    drupal_add_feed(url("node/$node->nid/feed"), drupal_get_title());
   }
+}
 
-  // Views will set either total_rows or num_rows depending on whether
-  // View has a pager, or might show an empty text.
-  if (!empty($view->total_rows) || !empty($view->num_rows) || !empty($view->page_empty) || !empty($view->display[$view->current_display]->display_options['empty'])) {
-    $node->content['view'] = array('#value' => $built);
+/**
+ * An implementation of hook_views_pre_view().
+ */
+function og_views_views_pre_view(&$view, &$display_id, &$args) {
+  if ($view->name == 'og_my') {
+    if (!$view->display_handler->get_option('header')) {
+      $txt = t('You might be interested in an <a href="!url" rel="nofollow">OPML feed containing feeds from all your subscribed groups</a>.', array('!url' => url('og/opml')));
+      
+      $view->attachment_before = $txt;
+    }
+    if (!$view->display_handler->get_option('footer')) {
+      $view->attachment_after = theme('opml_icon', url('og/opml'));
+    }
   }
-  elseif (empty($_POST)) {
-    // If views hasn't show any text we show og's empty text.
-    // Otherwise show it to everybody.
-    og_home_empty($node);
-  }
-  drupal_set_title(filter_xss_admin($view->build_info['title']));
-  drupal_add_feed(url("node/$node->nid/feed"), drupal_get_title());
 }
