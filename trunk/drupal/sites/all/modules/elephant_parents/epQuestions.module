@@ -10,7 +10,7 @@ function epQuestions_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
 	{
 		if($op == 'presave' && !user_access('administer comments') && empty($node->title) || $node->title == 'Question') 
 		{
-			$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : null; // first \s after 50
+			$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : 50; // first \s after 50
 			$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
 		}
 	}
@@ -33,17 +33,6 @@ function epQuestions_form_alter(&$form, $form_state, $form_id)
 }
 
 
-function null_epQuestions_db_rewrite_sql($query, $primary_table, $primary_field, $args) {
-}
-function null_epQuestions_link_alter(&$links, $node) {
-}
-function null_epQuestions_comment(&$a1, $op) {
-}
-function null_epQuestions_preprocess_comment_wrapper(&$variables) {
-}
-function null_epQestions_comment_block() {
-}
-
 function epQuestions_user($op, &$edit, &$account, $category = NULL) 
 {
 	if($op == 'insert') {
@@ -53,10 +42,10 @@ function epQuestions_user($op, &$edit, &$account, $category = NULL)
 				'subject' => 'New user request',
 				'body' => array(
 					"A new user (". $u->mail .") has requested special status on the site.",
-					($u->profile_request_professional) ? "\t[ x ]Professional Status" : "\t[  ]Professional Status",
-					($u->profile_request_columnist) ? "\t[ x ]Columnist Status" : "\t[  ]Columnist Status",
+					($u->profile_request_professional) ? "\t[ x ]Professional Status" : "\t[   ]Professional Status",
+					($u->profile_request_columnist) ? "\t[ x ]Columnist Status" : "\t[   ]Columnist Status",
 					"\t". strip_tags($u->profile_request_details),
-					"\nTo change activate, deactivate or change user roles, visit ". url('admin/user', array('absolute'=>true)) .".",
+					"\nTo activate, deactivate or change user settings, visit ". url('admin/user', array('absolute'=>true)) .".",
 					"\nThank you!",
 					),
 				);
@@ -75,13 +64,16 @@ function epQuestions_mail($key, &$message, $params)
 	}
 }
 
-
-function epQuestions_user_register_submit() {
+function null_epQuestions_db_rewrite_sql($query, $primary_table, $primary_field, $args) {
+}
+function null_epQuestions_link_alter(&$links, $node) {
+}
+function null_epQuestions_comment(&$a1, $op) {
+}
+function null_epQuestions_preprocess_comment_wrapper(&$variables) {
+}
+function null_epQestions_comment_block() {
 }
 
-function epQuestions_form_submit() {
-}
 
 
-function epQuestions_new_user_notify() {
-}

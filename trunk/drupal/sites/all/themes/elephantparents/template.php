@@ -251,15 +251,15 @@ if(!function_exists('array_diff_key'))
 }
 
 
-// quick hack for block with recent question answers
+// quick hack for block with recent unanswered questions
 function ep_recent_qquestions()
 {
-	$q = "SELECT n.* from {node} n WHERE n.status = 1 and n.comment = 0 ORDER BY n.sticky desc, n.changed desc"; // need to order comments in the rollup
+	$q = "SELECT n.* from {node} n WHERE n.status = 1 and n.comment = 0 and n.type = 'question' ORDER BY n.sticky desc, n.changed desc"; // need to order comments in the rollup
 	$r = db_query_range(db_rewrite_sql($q), null, 0, 10);
 	while($data = db_fetch_object($r)) 
 	{
 		$n = node_load($data->nid);
-		$html = '<div class="title">'. l($n->title, 'node/'. $n->uid) .' <span class="date">'. format_date($n->changed, 'small') .'</span></div>';
+		$html = '<div class="title">'. l($n->title, 'node/'. $n->nid) .' <span class="date">'. format_date($n->changed, 'small') .'</span></div>';
 		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link('node/'. $n->uid, 'Read more of this post') .'</div>'; 
 		$list[] = $html;
 	}
@@ -272,9 +272,9 @@ ep.ep_recent_qquestions = function()
 		var info = $(this).parent('.title').next('.teaser');
 		$(this).click(function() {
 			$(info).slideToggle('slow');
+			$(info).click(function() { document.location = link; });
 			return false;
 		});
-//		$(info).click(function() { document.location = link; });
 	});
 }
 $(document).ready(function() { ep.ep_recent_qquestions(); });
@@ -291,7 +291,7 @@ function ep_recent_qanswers()
 JOIN {comments} c on c.nid = n.nid
 JOIN {users} u on u.uid = c.uid
 JOIN {users_roles} r on r.uid = u.uid
-WHERE n.status = 1 and r.rid in (3,4,5,6)
+WHERE n.status = 1 and n.type = 'question' and r.rid in (3,4,5,6)
 GROUP BY n.nid
 ORDER BY n.sticky desc, c.timestamp desc, n.changed desc"; // need to order comments in the rollup
 	$r = db_query_range(db_rewrite_sql($q), null, 0, 6);
