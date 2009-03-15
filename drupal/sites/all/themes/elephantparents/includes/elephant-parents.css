@@ -48,7 +48,7 @@
 	font-style: italic;
 	}
 #ep_recent_qquestions .teaser:hover { 
-	border-right: 1px solid #dcdcdc; 
+	text-decoration: underline; /* adding a link in js */
 	border-bottom: 1px solid #dcdcdc; 
 	}
 #ep-welcome .date {
