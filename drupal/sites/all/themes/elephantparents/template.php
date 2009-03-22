@@ -9,7 +9,8 @@ drupal_add_js(path_to_theme().'/includes/elephant-parents.js');
 function phptemplate_preprocess(&$variables, $hook) 
 {
 	global $user;
-	if($hook == 'page' && strpos(drupal_set_header(), '404 Not Found') !== false) 
+	if(1==2 
+	&& $hook == 'page' && strpos(drupal_set_header(), '404 Not Found') !== false) 
 	{ // set a more useful error message and enable blocks
 		drupal_set_message('The page you requested can not be found. Please recheck the address (<tt>url</tt>) and try again.');
 		$variables['show_blocks'] = $variables['show_blocks'] ? $variables['show_blocks'] : true; // !! not getting a hook on this
@@ -201,11 +202,6 @@ function phptemplate_user_picture($account, $size = array('height'=>120,'width'=
 	}
 } 
 
-
-
-
-
-
 /**
  * Returns the rendered local tasks. The default implementation renders
  * them as tabs. Overridden to split the secondary tasks.
@@ -251,18 +247,23 @@ if(!function_exists('array_diff_key'))
 }
 
 
-// quick hack for block with recent unanswered questions
+// quick hack for block with recent un-answered questions
 function ep_recent_qquestions()
 {
-	$q = "SELECT n.* from {node} n WHERE n.status = 1 and n.comment = 0 and n.type = 'question' ORDER BY n.sticky desc, n.changed desc"; // need to order comments in the rollup
+	$q = "SELECT n.* from {node} n 
+LEFT OUTER JOIN {comments} c on c.nid = n.nid 
+WHERE n.status = 1 and n.type = 'question' AND c.nid IS NULL 
+ORDER BY n.created desc";
 	$r = db_query_range(db_rewrite_sql($q), null, 0, 10);
 	while($data = db_fetch_object($r)) 
 	{
 		$n = node_load($data->nid);
 		$html = '<div class="title">'. l($n->title, 'node/'. $n->nid) .' <span class="date">'. format_date($n->changed, 'small') .'</span></div>';
-		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link('node/'. $n->uid, 'Read more of this post') .'</div>'; 
+		$html .= '<div class="teaser" style="display:none">'. node_teaser($n->teaser) .' '. theme_more_link('node/'. $n->nid, 'Read more of this post') .'</div>'; 
 		$list[] = $html;
 	}
+	$list = empty($list) ? array('<em>No recent questions found...</em>') : $list;
+	array_unshift($list, l('Create your own question', 'node/add/question'));
 	$js = "
 ep.ep_recent_qquestions = function() 
 {
@@ -283,7 +284,7 @@ $(document).ready(function() { ep.ep_recent_qquestions(); });
 	return '<div id="ep_recent_qquestions">'. theme('item_list', $list) .'<div class="more-link">'. l('Archive', 'questions-answers') .'</div></div>';
 }
 
-
+// show recently answered questions. No answer-comments for anon user
 function ep_recent_qanswers()
 {
 	global $user;
@@ -305,12 +306,13 @@ ORDER BY n.sticky desc, c.timestamp desc, n.changed desc"; // need to order comm
 			$html .= '<div class="teaser answer">'. node_teaser($data->comment) .'</div>'; 
 		}
 		else {
-			$html .= '<div class="teaser">'. node_teaser($n->teaser) .'</div>'; 
-			$html .= '<span>'. l('Upgrade', 'contact/get-professional-status') .' or '. l('register', 'user/register') .' to view the latest answer.</span>';
+			$html .= '<div class="teaser">'. node_teaser($n->teaser); 
+			$html .= ' <em>'. l('Upgrade', 'contact/get-professional-status') .' or '. l('register', 'user/register') .' to view answers to this post.</em></div>';
 		}
 		$html .= '<div class="trailer">Answer Submitted By: '. l($u->name, 'user/'. $u->uid) .'</div>';
 		$list[] = $html;
 	}
+	$list = empty($list) ? array('<em>No recent questions found...</em>') : $list;
 	return '<div id="ep_recent_qanswers">'. theme('item_list', $list) .'<div class="more-link">'. l('Archive', 'questions-answers') .'</div></div>';
 }
 

@@ -10,11 +10,10 @@ function epQuestions_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
 	{
 		if($op == 'presave' && !user_access('administer comments') && empty($node->title) || $node->title == 'Question') 
 		{
-			$pos = (strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : 50; // first \s after 50
-			$node->title = ucwords(strtolower(substr($node->body, 0, $pos) .'...'));
+			$pos = (strlen($node->body) > 50 && strpos($node->body, ' ', 50)) ? strpos($node->body, ' ', 50) : 50; // first \s after 50
+			$node->title = ucwords(strtolower(substr(strip_tags($node->body), 0, $pos) .'...'));
 		}
 	}
-	
 }
 
 function epQuestions_form_alter(&$form, $form_state, $form_id) 
